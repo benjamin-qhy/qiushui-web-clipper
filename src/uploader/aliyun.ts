@@ -85,7 +85,7 @@ async function signOSS(params: {
     params.method,
     '',
     params.contentType,
-    '',
+    params.ossDate,
     `${canonicalizedOssHeaders}/${params.bucket}/${params.objectKey}`,
   ].join('\n')
 

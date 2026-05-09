@@ -141,7 +141,7 @@ describe('AliyunOSSUploader', () => {
     const stringToSign = new TextDecoder().decode(data)
     const objectKey = `obsidian/clips/feishu/202605/note-${formatTimestamp(fixedDate)}.png`
     expect(stringToSign).toBe(
-      `PUT\n\nimage/png\n\nx-oss-date:20260509T143022Z\n/test-bucket/${objectKey}`,
+      `PUT\n\nimage/png\n20260509T143022Z\nx-oss-date:20260509T143022Z\n/test-bucket/${objectKey}`,
     )
   })
 
