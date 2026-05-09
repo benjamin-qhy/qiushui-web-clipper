@@ -58,7 +58,7 @@ describe('blocksToMarkdown', () => {
 
   it('image', () => {
     const blocks: Block[] = [{ type: 'image', src: 'https://img.example.com/a.png', alt: '截图' }]
-    expect(blocksToMarkdown(blocks)).toBe('![截图](https://img.example.com/a.png)')
+    expect(blocksToMarkdown(blocks)).toBe('![截图](<https://img.example.com/a.png>)')
   })
 
   it('quote_container', () => {
