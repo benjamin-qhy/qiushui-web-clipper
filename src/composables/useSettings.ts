@@ -49,7 +49,6 @@ export function useSettings() {
     onScopeDispose(() => {
       isDisposed = true
       latestSaveId += 1
-      pendingSave = undefined
       clearResetStatusTimer()
     })
   }
