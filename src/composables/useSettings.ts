@@ -10,6 +10,7 @@ export function useSettings() {
   let latestSaveId = 0
   let pendingSave: { id: number; snapshot: Settings } | undefined
   let saveQueue: Promise<void> | undefined
+  let isDisposed = false
 
   async function load() {
     settings.value = await getSettings()
@@ -30,9 +31,12 @@ export function useSettings() {
   }
 
   function scheduleResetStatus(saveId: number) {
+    if (isDisposed) {
+      return
+    }
     clearResetStatusTimer()
     resetStatusTimer = setTimeout(() => {
-      if (saveId !== latestSaveId) {
+      if (isDisposed || saveId !== latestSaveId) {
         resetStatusTimer = undefined
         return
       }
@@ -42,7 +46,12 @@ export function useSettings() {
   }
 
   if (getCurrentScope()) {
-    onScopeDispose(clearResetStatusTimer)
+    onScopeDispose(() => {
+      isDisposed = true
+      latestSaveId += 1
+      pendingSave = undefined
+      clearResetStatusTimer()
+    })
   }
 
   function flushPendingSaves() {
@@ -58,13 +67,13 @@ export function useSettings() {
 
           try {
             await saveSettings(currentSave.snapshot)
-            if (currentSave.id !== latestSaveId) {
+            if (isDisposed || currentSave.id !== latestSaveId) {
               continue
             }
             saveStatus.value = 'saved'
             scheduleResetStatus(currentSave.id)
           } catch {
-            if (currentSave.id !== latestSaveId) {
+            if (isDisposed || currentSave.id !== latestSaveId) {
               continue
             }
             saveStatus.value = 'error'
@@ -72,7 +81,7 @@ export function useSettings() {
         }
       } finally {
         saveQueue = undefined
-        if (!pendingSave) {
+        if (!isDisposed && !pendingSave) {
           isSaving.value = false
         }
       }
@@ -82,6 +91,9 @@ export function useSettings() {
   }
 
   async function save() {
+    if (isDisposed) {
+      return
+    }
     pendingSave = { id: ++latestSaveId, snapshot: getSettingsSnapshot() }
     isSaving.value = true
     clearResetStatusTimer()
