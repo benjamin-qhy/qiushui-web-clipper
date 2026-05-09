@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useSettings } from '../../src/composables/useSettings'
 import { useVaultStore } from '../../src/composables/useVaultStore'
 
@@ -25,7 +25,10 @@ onMounted(async () => {
 })
 
 const vaultName = computed(() => vault.handle.value?.name ?? null)
-const vaultButtonLabel = computed(() => vaultName.value ? '重新选择' : '选择目录')
+const vaultButtonLabel = computed(() => {
+  if (vault.needsReauth.value) return '重新授权'
+  return vaultName.value ? '重新选择' : '选择目录'
+})
 
 const ossPathPreview = computed(() => {
   const prefix = settings.value.aliyunOSS.prefix.trim().replace(/^\/+|\/+$/g, '')
@@ -33,13 +36,52 @@ const ossPathPreview = computed(() => {
   return `${prefixPath}feishu/202605/笔记标题-20260509143022583.png`
 })
 
+function resetTestStatus() {
+  testStatus.value = 'idle'
+  testError.value = ''
+}
+
+function handleVaultAction() {
+  if (vault.needsReauth.value) {
+    return vault.reauthorize()
+  }
+  return vault.authorize()
+}
+
+watch(
+  () => [
+    settings.value.imageMode,
+    settings.value.ossProvider,
+    settings.value.aliyunOSS.accessKeyId,
+    settings.value.aliyunOSS.accessKeySecret,
+    settings.value.aliyunOSS.bucket,
+    settings.value.aliyunOSS.region,
+    settings.value.aliyunOSS.prefix,
+  ],
+  () => {
+    resetTestStatus()
+  },
+)
+
 async function testConnection() {
+  const config = settings.value.aliyunOSS
+  if (
+    !config.accessKeyId.trim() ||
+    !config.accessKeySecret.trim() ||
+    !config.bucket.trim() ||
+    !config.region.trim()
+  ) {
+    testStatus.value = 'fail'
+    testError.value = '请先填写完整的 OSS 连接信息'
+    return
+  }
+
   testStatus.value = 'testing'
   testError.value = ''
 
   try {
     const { AliyunOSSUploader } = await import('../../src/uploader/aliyun')
-    const uploader = new AliyunOSSUploader(settings.value.aliyunOSS)
+    const uploader = new AliyunOSSUploader(config)
     const transparentPng1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
 
     await uploader.upload({
@@ -68,7 +110,7 @@ async function testConnection() {
         <label class="label">Obsidian Vault 目录</label>
         <div class="vault-row">
           <span class="vault-name">{{ vaultName ?? '未选择' }}</span>
-          <button class="btn-secondary" type="button" @click="vault.authorize()">
+          <button class="btn-secondary" type="button" @click="handleVaultAction">
             {{ vaultButtonLabel }}
           </button>
         </div>
