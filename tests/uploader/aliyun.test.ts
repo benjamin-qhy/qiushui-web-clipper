@@ -71,6 +71,18 @@ describe('buildObjectKey', () => {
 
     expect(key).toMatch(/^obsidian\/clips\/fei-shu\/\d{6}\/我的-笔记-\d{17}\.png$/)
   })
+
+  it('replaces dot path segments in prefix, source, and notename', () => {
+    const key = buildObjectKey({
+      prefix: './obsidian/../clips',
+      source: '..',
+      notename: '.',
+      date: fixedDate,
+      ext: 'png',
+    })
+
+    expect(key).toMatch(/^_\/obsidian\/_\/clips\/_\/\d{6}\/_-\d{17}\.png$/)
+  })
 })
 
 describe('mimeToExt', () => {
@@ -107,6 +119,23 @@ describe('AliyunOSSUploader', () => {
       'Authorization': 'OSS access-key-id:AQID',
     })
     expect(Array.from(init.body)).toEqual([104, 101, 108, 108, 111])
+  })
+
+  it('uploads with dot segments encoded as safe literal names', async () => {
+    const fetchMock = mockFetch()
+    const uploader = new AliyunOSSUploader({ ...config, prefix: './obsidian/..' })
+
+    const url = await uploader.upload({
+      base64: 'aGVsbG8=',
+      mimeType: 'image/png',
+      notename: '..',
+      source: '.',
+    })
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [requestUrl] = fetchMock.mock.calls[0]
+    expect(requestUrl).toBe(url)
+    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/_\/obsidian\/_\/_\/\d{6}\/_-\d{17}\.png$/)
   })
 
   it('uploads URL-safe raw base64', async () => {

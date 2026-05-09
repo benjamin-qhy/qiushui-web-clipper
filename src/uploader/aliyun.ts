@@ -124,5 +124,6 @@ function normalizePrefix(prefix: string): string[] {
 }
 
 function safeObjectSegment(segment: string): string {
-  return segment.trim().replace(/[\\/]+/g, '-')
+  const safeSegment = segment.trim().replace(/[\\/]+/g, '-')
+  return safeSegment === '.' || safeSegment === '..' ? '_' : safeSegment
 }
