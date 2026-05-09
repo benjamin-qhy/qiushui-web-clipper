@@ -7,6 +7,9 @@ export default defineConfig({
     description: '将飞书文档一键保存为 Obsidian Markdown 笔记',
     version: '0.1.0',
     permissions: ['storage', 'activeTab', 'scripting'],
-    host_permissions: ['*://*.feishu.cn/*'],
+    host_permissions: [
+      '*://*.feishu.cn/*',
+      'https://*.aliyuncs.com/*',
+    ],
   },
 })
