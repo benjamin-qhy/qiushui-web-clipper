@@ -12,12 +12,15 @@ const config = {
 }
 
 function mockCrypto() {
+  const importKey = vi.fn().mockResolvedValue('key')
+  const sign = vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer)
   vi.stubGlobal('crypto', {
     subtle: {
-      importKey: vi.fn().mockResolvedValue('key'),
-      sign: vi.fn().mockResolvedValue(new Uint8Array([1, 2, 3]).buffer),
+      importKey,
+      sign,
     },
   })
+  return { importKey, sign }
 }
 
 function mockFetch(ok = true, text = '') {
@@ -115,10 +118,31 @@ describe('AliyunOSSUploader', () => {
     expect(init.method).toBe('PUT')
     expect(init.headers).toMatchObject({
       'Content-Type': 'image/png',
-      'Date': fixedDate.toUTCString(),
+      'x-oss-date': '20260509T143022Z',
       'Authorization': 'OSS access-key-id:AQID',
     })
     expect(Array.from(init.body)).toEqual([104, 101, 108, 108, 111])
+  })
+
+  it('signs against x-oss-date canonicalized headers instead of the Date header', async () => {
+    const { sign } = mockCrypto()
+    mockFetch()
+    const uploader = new AliyunOSSUploader(config)
+
+    await uploader.upload({
+      base64: 'aGVsbG8=',
+      mimeType: 'image/png',
+      notename: 'note',
+      source: 'feishu',
+    })
+
+    expect(sign).toHaveBeenCalledOnce()
+    const [, , data] = sign.mock.calls[0]
+    const stringToSign = new TextDecoder().decode(data)
+    const objectKey = `obsidian/clips/feishu/202605/note-${formatTimestamp(fixedDate)}.png`
+    expect(stringToSign).toBe(
+      `PUT\n\nimage/png\n\nx-oss-date:20260509T143022Z\n/test-bucket/${objectKey}`,
+    )
   })
 
   it('uploads with dot segments encoded as safe literal names', async () => {

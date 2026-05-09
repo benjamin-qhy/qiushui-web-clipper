@@ -10,12 +10,11 @@ export class AliyunOSSUploader implements ImageUploader {
     const objectKey = buildObjectKey({ prefix: this.config.prefix, source, notename, date: now, ext })
 
     const bytes = base64ToBytes(base64)
-
-    const date = now.toUTCString()
+    const ossDate = formatOssDate(now)
     const signature = await signOSS({
       method: 'PUT',
       contentType: mimeType,
-      date,
+      ossDate,
       bucket: this.config.bucket,
       objectKey,
       secretKey: this.config.accessKeySecret,
@@ -28,7 +27,7 @@ export class AliyunOSSUploader implements ImageUploader {
       method: 'PUT',
       headers: {
         'Content-Type': mimeType,
-        'Date': date,
+        'x-oss-date': ossDate,
         'Authorization': `OSS ${this.config.accessKeyId}:${signature}`,
       },
       body: bytes,
@@ -76,17 +75,18 @@ export function mimeToExt(mimeType: string): string {
 async function signOSS(params: {
   method: string
   contentType: string
-  date: string
+  ossDate: string
   bucket: string
   objectKey: string
   secretKey: string
 }): Promise<string> {
+  const canonicalizedOssHeaders = `x-oss-date:${params.ossDate}\n`
   const stringToSign = [
     params.method,
     '',
     params.contentType,
-    params.date,
-    `/${params.bucket}/${params.objectKey}`,
+    '',
+    `${canonicalizedOssHeaders}/${params.bucket}/${params.objectKey}`,
   ].join('\n')
 
   const key = await crypto.subtle.importKey(
@@ -114,6 +114,20 @@ function normalizeBase64(input: string): string {
   const standard = rawBase64.trim().replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/')
   const padding = standard.length % 4
   return padding === 0 ? standard : standard.padEnd(standard.length + 4 - padding, '=')
+}
+
+function formatOssDate(date: Date): string {
+  const pad = (value: number, width = 2) => String(value).padStart(width, '0')
+  return [
+    date.getUTCFullYear(),
+    pad(date.getUTCMonth() + 1),
+    pad(date.getUTCDate()),
+    'T',
+    pad(date.getUTCHours()),
+    pad(date.getUTCMinutes()),
+    pad(date.getUTCSeconds()),
+    'Z',
+  ].join('')
 }
 
 function normalizePrefix(prefix: string): string[] {
