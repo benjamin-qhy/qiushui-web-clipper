@@ -1,20 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getSettings, saveSettings, DEFAULT_SETTINGS } from '../../src/storage/settings'
 
-const mockStorage: Record<string, unknown> = {}
+const { mockStorage, storageGet, storageSet } = vi.hoisted(() => {
+  const mockStorage: Record<string, unknown> = {}
+  return {
+    mockStorage,
+    storageGet: vi.fn(async (key: string) => ({ [key]: mockStorage[key] })),
+    storageSet: vi.fn(async (obj: Record<string, unknown>) => {
+      Object.assign(mockStorage, obj)
+    }),
+  }
+})
+
+vi.mock('wxt/browser', () => ({
+  browser: {
+    storage: {
+      local: {
+        get: storageGet,
+        set: storageSet,
+      },
+    },
+  },
+}))
 
 beforeEach(() => {
   Object.keys(mockStorage).forEach(k => delete mockStorage[k])
-  vi.stubGlobal('chrome', {
-    storage: {
-      local: {
-        get: vi.fn(async (key: string) => ({ [key]: mockStorage[key] })),
-        set: vi.fn(async (obj: Record<string, unknown>) => {
-          Object.assign(mockStorage, obj)
-        }),
-      },
-    },
-  })
+  storageGet.mockClear()
+  storageSet.mockClear()
 })
 
 describe('getSettings', () => {
@@ -35,7 +47,7 @@ describe('getSettings', () => {
 })
 
 describe('saveSettings', () => {
-  it('persists settings to chrome.storage.local', async () => {
+  it('persists settings to browser.storage.local', async () => {
     const settings = { ...DEFAULT_SETTINGS, subDir: 'Archive' }
     await saveSettings(settings)
     const stored = mockStorage['feishu-clipper-settings'] as typeof settings

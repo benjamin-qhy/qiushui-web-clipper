@@ -1,3 +1,5 @@
+import { browser } from 'wxt/browser'
+
 export interface AliyunOSSConfig {
   accessKeyId: string
   accessKeySecret: string
@@ -29,7 +31,7 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export async function getSettings(): Promise<Settings> {
-  const result = await chrome.storage.local.get(STORAGE_KEY)
+  const result = await browser.storage.local.get(STORAGE_KEY)
   const stored = (result[STORAGE_KEY] ?? {}) as Partial<Settings>
   return {
     ...DEFAULT_SETTINGS,
@@ -39,5 +41,5 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
-  await chrome.storage.local.set({ [STORAGE_KEY]: settings })
+  await browser.storage.local.set({ [STORAGE_KEY]: settings })
 }
