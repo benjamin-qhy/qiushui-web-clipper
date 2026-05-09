@@ -8,6 +8,8 @@ export function useSettings() {
   const saveStatus = ref<'idle' | 'saved' | 'error'>('idle')
   let resetStatusTimer: ReturnType<typeof setTimeout> | undefined
   let latestSaveId = 0
+  let pendingSave: { id: number; snapshot: Settings } | undefined
+  let saveQueue: Promise<void> | undefined
 
   async function load() {
     settings.value = await getSettings()
@@ -27,9 +29,13 @@ export function useSettings() {
     }
   }
 
-  function scheduleResetStatus() {
+  function scheduleResetStatus(saveId: number) {
     clearResetStatusTimer()
     resetStatusTimer = setTimeout(() => {
+      if (saveId !== latestSaveId) {
+        resetStatusTimer = undefined
+        return
+      }
       saveStatus.value = 'idle'
       resetStatusTimer = undefined
     }, 2000)
@@ -39,27 +45,47 @@ export function useSettings() {
     onScopeDispose(clearResetStatusTimer)
   }
 
+  function flushPendingSaves() {
+    if (saveQueue) {
+      return saveQueue
+    }
+
+    saveQueue = (async () => {
+      try {
+        while (pendingSave) {
+          const currentSave = pendingSave
+          pendingSave = undefined
+
+          try {
+            await saveSettings(currentSave.snapshot)
+            if (currentSave.id !== latestSaveId) {
+              continue
+            }
+            saveStatus.value = 'saved'
+            scheduleResetStatus(currentSave.id)
+          } catch {
+            if (currentSave.id !== latestSaveId) {
+              continue
+            }
+            saveStatus.value = 'error'
+          }
+        }
+      } finally {
+        saveQueue = undefined
+        if (!pendingSave) {
+          isSaving.value = false
+        }
+      }
+    })()
+
+    return saveQueue
+  }
+
   async function save() {
-    const saveId = ++latestSaveId
+    pendingSave = { id: ++latestSaveId, snapshot: getSettingsSnapshot() }
     isSaving.value = true
     clearResetStatusTimer()
-    try {
-      await saveSettings(getSettingsSnapshot())
-      if (saveId !== latestSaveId) {
-        return
-      }
-      saveStatus.value = 'saved'
-      scheduleResetStatus()
-    } catch {
-      if (saveId !== latestSaveId) {
-        return
-      }
-      saveStatus.value = 'error'
-    } finally {
-      if (saveId === latestSaveId) {
-        isSaving.value = false
-      }
-    }
+    await flushPendingSaves()
   }
 
   return { settings, isSaving, saveStatus, load, save }
