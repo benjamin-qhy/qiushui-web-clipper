@@ -7,6 +7,7 @@ export function useSettings() {
   const isSaving = ref(false)
   const saveStatus = ref<'idle' | 'saved' | 'error'>('idle')
   let resetStatusTimer: ReturnType<typeof setTimeout> | undefined
+  let latestSaveId = 0
 
   async function load() {
     settings.value = await getSettings()
@@ -39,16 +40,25 @@ export function useSettings() {
   }
 
   async function save() {
+    const saveId = ++latestSaveId
     isSaving.value = true
     clearResetStatusTimer()
     try {
       await saveSettings(getSettingsSnapshot())
+      if (saveId !== latestSaveId) {
+        return
+      }
       saveStatus.value = 'saved'
       scheduleResetStatus()
     } catch {
+      if (saveId !== latestSaveId) {
+        return
+      }
       saveStatus.value = 'error'
     } finally {
-      isSaving.value = false
+      if (saveId === latestSaveId) {
+        isSaving.value = false
+      }
     }
   }
 
