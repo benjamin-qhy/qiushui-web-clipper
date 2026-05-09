@@ -9,9 +9,7 @@ export class AliyunOSSUploader implements ImageUploader {
     const now = new Date()
     const objectKey = buildObjectKey({ prefix: this.config.prefix, source, notename, date: now, ext })
 
-    const binary = atob(base64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+    const bytes = base64ToBytes(base64)
 
     const date = now.toUTCString()
     const signature = await signOSS({
@@ -55,8 +53,10 @@ export function buildObjectKey(params: {
   const { prefix, source, notename, date, ext } = params
   const yyyymm = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`
   const ts = formatTimestamp(date)
-  const base = `${source}/${yyyymm}/${notename}-${ts}.${ext}`
-  return prefix ? `${prefix}/${base}` : base
+  const prefixSegments = normalizePrefix(prefix)
+  const sourceSegment = safeObjectSegment(source) || 'unknown'
+  const noteSegment = safeObjectSegment(notename) || 'untitled'
+  return [...prefixSegments, sourceSegment, yyyymm, `${noteSegment}-${ts}.${ext}`].join('/')
 }
 
 export function formatTimestamp(d: Date): string {
@@ -98,4 +98,31 @@ async function signOSS(params: {
   )
   const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(stringToSign))
   return btoa(String.fromCharCode(...new Uint8Array(sig)))
+}
+
+function base64ToBytes(input: string): Uint8Array<ArrayBuffer> {
+  const base64 = normalizeBase64(input)
+  const binary = atob(base64)
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length))
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+function normalizeBase64(input: string): string {
+  const dataUrlMatch = input.match(/^data:[^,]*;base64,(.*)$/is)
+  const rawBase64 = dataUrlMatch ? dataUrlMatch[1] : input
+  const standard = rawBase64.trim().replace(/\s/g, '').replace(/-/g, '+').replace(/_/g, '/')
+  const padding = standard.length % 4
+  return padding === 0 ? standard : standard.padEnd(standard.length + 4 - padding, '=')
+}
+
+function normalizePrefix(prefix: string): string[] {
+  return prefix
+    .split(/[\\/]+/)
+    .map(safeObjectSegment)
+    .filter(Boolean)
+}
+
+function safeObjectSegment(segment: string): string {
+  return segment.trim().replace(/[\\/]+/g, '-')
 }
