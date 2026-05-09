@@ -377,6 +377,11 @@ async function testConnection() {
   font-size: 13px;
 }
 
+.test-fail {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .footer {
   padding-top: 4px;
 }

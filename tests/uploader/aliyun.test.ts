@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AliyunOSSUploader, buildObjectKey, formatTimestamp, mimeToExt } from '../../src/uploader/aliyun'
+import {
+  AliyunOSSUploader,
+  OSS_SIGNATURE_DIAGNOSTIC_VERSION,
+  buildObjectKey,
+  formatTimestamp,
+  mimeToExt,
+} from '../../src/uploader/aliyun'
 
 const fixedDate = new Date('2026-05-09T14:30:22.583Z')
 
@@ -181,11 +187,49 @@ describe('AliyunOSSUploader', () => {
     mockFetch(false, 'forbidden')
     const uploader = new AliyunOSSUploader(config)
 
-    await expect(uploader.upload({
+    await expect(
+      uploader.upload({
+        base64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        notename: '笔记',
+        source: 'feishu',
+      }),
+    ).rejects.toThrow(`OSS upload failed 403: forbidden`)
+
+    await expect(
+      uploader.upload({
+        base64: 'aGVsbG8=',
+        mimeType: 'image/png',
+        notename: '笔记',
+        source: 'feishu',
+      }),
+    ).rejects.toThrow(`version=${OSS_SIGNATURE_DIAGNOSTIC_VERSION}`)
+  })
+
+  it('trims config fields before signing and requesting', async () => {
+    const { sign } = mockCrypto()
+    const fetchMock = mockFetch()
+    const uploader = new AliyunOSSUploader({
+      accessKeyId: ' access-key-id ',
+      accessKeySecret: ' access-key-secret ',
+      bucket: ' test-bucket ',
+      region: ' oss-cn-hangzhou ',
+      prefix: ' clips ',
+    })
+
+    await uploader.upload({
       base64: 'aGVsbG8=',
       mimeType: 'image/png',
-      notename: '笔记',
+      notename: 'note',
       source: 'feishu',
-    })).rejects.toThrow('OSS upload failed 403: forbidden')
+    })
+
+    const [requestUrl, init] = fetchMock.mock.calls[0]
+    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/clips\/feishu\//)
+    expect(init.headers.Authorization).toBe('OSS access-key-id:AQID')
+
+    const [, , data] = sign.mock.calls[0]
+    const stringToSign = new TextDecoder().decode(data)
+    expect(stringToSign).toContain('/test-bucket/clips/feishu/')
   })
 })

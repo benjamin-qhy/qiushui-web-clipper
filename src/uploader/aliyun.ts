@@ -1,13 +1,16 @@
 import type { AliyunOSSConfig } from '../storage/settings'
 import type { ImageUploader, UploadParams } from './types'
 
+export const OSS_SIGNATURE_DIAGNOSTIC_VERSION = 'oss-v1-x-oss-date-trim-config'
+
 export class AliyunOSSUploader implements ImageUploader {
   constructor(private config: AliyunOSSConfig) {}
 
   async upload({ base64, mimeType, notename, source }: UploadParams): Promise<string> {
+    const config = normalizeConfig(this.config)
     const ext = mimeToExt(mimeType)
     const now = new Date()
-    const objectKey = buildObjectKey({ prefix: this.config.prefix, source, notename, date: now, ext })
+    const objectKey = buildObjectKey({ prefix: config.prefix, source, notename, date: now, ext })
 
     const bytes = base64ToBytes(base64)
     const ossDate = formatOssDate(now)
@@ -15,27 +18,45 @@ export class AliyunOSSUploader implements ImageUploader {
       method: 'PUT',
       contentType: mimeType,
       ossDate,
-      bucket: this.config.bucket,
+      bucket: config.bucket,
       objectKey,
-      secretKey: this.config.accessKeySecret,
+      secretKey: config.accessKeySecret,
+    })
+    const stringToSign = buildStringToSign({
+      method: 'PUT',
+      contentType: mimeType,
+      ossDate,
+      bucket: config.bucket,
+      objectKey,
     })
 
     const encodedKey = objectKey.split('/').map(encodeURIComponent).join('/')
-    const publicUrl = `https://${this.config.bucket}.${this.config.region}.aliyuncs.com/${encodedKey}`
+    const publicUrl = `https://${config.bucket}.${config.region}.aliyuncs.com/${encodedKey}`
 
     const resp = await fetch(publicUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': mimeType,
         'x-oss-date': ossDate,
-        'Authorization': `OSS ${this.config.accessKeyId}:${signature}`,
+        'Authorization': `OSS ${config.accessKeyId}:${signature}`,
       },
       body: bytes,
     })
 
     if (!resp.ok) {
       const text = await resp.text()
-      throw new Error(`OSS upload failed ${resp.status}: ${text}`)
+      throw new Error(
+        `OSS upload failed ${resp.status}: ${text}\n\nClientDiagnostics:\n${buildClientDiagnostics({
+          accessKeyId: config.accessKeyId,
+          accessKeySecretLength: config.accessKeySecret.length,
+          bucket: config.bucket,
+          region: config.region,
+          prefix: config.prefix,
+          ossDate,
+          objectKey,
+          stringToSign,
+        })}`,
+      )
     }
 
     return publicUrl
@@ -80,14 +101,7 @@ async function signOSS(params: {
   objectKey: string
   secretKey: string
 }): Promise<string> {
-  const canonicalizedOssHeaders = `x-oss-date:${params.ossDate}\n`
-  const stringToSign = [
-    params.method,
-    '',
-    params.contentType,
-    params.ossDate,
-    `${canonicalizedOssHeaders}/${params.bucket}/${params.objectKey}`,
-  ].join('\n')
+  const stringToSign = buildStringToSign(params)
 
   const key = await crypto.subtle.importKey(
     'raw',
@@ -140,4 +154,54 @@ function normalizePrefix(prefix: string): string[] {
 function safeObjectSegment(segment: string): string {
   const safeSegment = segment.trim().replace(/[\\/]+/g, '-')
   return safeSegment === '.' || safeSegment === '..' ? '_' : safeSegment
+}
+
+function buildStringToSign(params: {
+  method: string
+  contentType: string
+  ossDate: string
+  bucket: string
+  objectKey: string
+}): string {
+  const canonicalizedOssHeaders = `x-oss-date:${params.ossDate}\n`
+  return [
+    params.method,
+    '',
+    params.contentType,
+    params.ossDate,
+    `${canonicalizedOssHeaders}/${params.bucket}/${params.objectKey}`,
+  ].join('\n')
+}
+
+function normalizeConfig(config: AliyunOSSConfig): AliyunOSSConfig {
+  return {
+    accessKeyId: config.accessKeyId.trim(),
+    accessKeySecret: config.accessKeySecret.trim(),
+    bucket: config.bucket.trim(),
+    region: config.region.trim(),
+    prefix: config.prefix.trim(),
+  }
+}
+
+function buildClientDiagnostics(params: {
+  accessKeyId: string
+  accessKeySecretLength: number
+  bucket: string
+  region: string
+  prefix: string
+  ossDate: string
+  objectKey: string
+  stringToSign: string
+}): string {
+  return [
+    `version=${OSS_SIGNATURE_DIAGNOSTIC_VERSION}`,
+    `accessKeyId=${params.accessKeyId}`,
+    `accessKeySecretLength=${params.accessKeySecretLength}`,
+    `bucket=${params.bucket}`,
+    `region=${params.region}`,
+    `prefix=${params.prefix}`,
+    `x-oss-date=${params.ossDate}`,
+    `objectKey=${params.objectKey}`,
+    `stringToSign=${params.stringToSign}`,
+  ].join('\n')
 }
