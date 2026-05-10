@@ -6,6 +6,7 @@ export interface AliyunOSSConfig {
   bucket: string
   region: string
   prefix: string
+  customDomain: string
 }
 
 export interface Settings {
@@ -26,7 +27,8 @@ export const DEFAULT_SETTINGS: Settings = {
     accessKeySecret: '',
     bucket: '',
     region: 'oss-cn-hangzhou',
-    prefix: '',
+    prefix: 'qiushui-web-clipper',
+    customDomain: '',
   },
 }
 

@@ -1,4 +1,5 @@
 import { defineContentScript } from 'wxt/utils/define-content-script'
+import { browser } from 'wxt/browser'
 import type { MessageRequest, MessageResponse, DocContent } from '../src/types'
 import { scrollAndCollectKdocsBlocks } from '../src/extractor/kdocs/collect'
 
@@ -6,8 +7,8 @@ export default defineContentScript({
   matches: ['*://*.kdocs.cn/l/*'],
 
   main() {
-    chrome.runtime.onMessage.addListener(
-      (message: MessageRequest, _sender, sendResponse: (r: MessageResponse) => void) => {
+    browser.runtime.onMessage.addListener(
+      (message: MessageRequest, _sender: unknown, sendResponse: (r: MessageResponse) => void) => {
         if (message.type === 'EXTRACT_DOC') {
           extractDoc().then(sendResponse).catch(err =>
             sendResponse({ ok: false, error: String(err) })

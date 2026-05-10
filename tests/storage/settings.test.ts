@@ -35,6 +35,8 @@ describe('getSettings', () => {
     expect(s.subDir).toBe('Clippings')
     expect(s.imageMode).toBe('local')
     expect(s.ossProvider).toBe('aliyun')
+    expect(s.aliyunOSS.prefix).toBe('qiushui-web-clipper')
+    expect(s.aliyunOSS.customDomain).toBe('')
   })
 
   it('merges stored values over defaults', async () => {

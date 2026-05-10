@@ -33,7 +33,7 @@ const vaultButtonLabel = computed(() => {
 const ossPathPreview = computed(() => {
   const prefix = settings.value.aliyunOSS.prefix.trim().replace(/^\/+|\/+$/g, '')
   const prefixPath = prefix ? `${prefix}/` : ''
-  return `${prefixPath}feishu/202605/笔记标题-20260509143022583.png`
+  return `${prefixPath}202605/笔记标题-20260509143022583.png`
 })
 
 function resetTestStatus() {
@@ -57,6 +57,7 @@ watch(
     settings.value.aliyunOSS.bucket,
     settings.value.aliyunOSS.region,
     settings.value.aliyunOSS.prefix,
+    settings.value.aliyunOSS.customDomain,
   ],
   () => {
     resetTestStatus()
@@ -188,8 +189,20 @@ async function testConnection() {
 
         <div class="field">
           <label class="label" for="oss-prefix">路径前缀</label>
-          <input id="oss-prefix" v-model="settings.aliyunOSS.prefix" class="input" placeholder="obsidian" />
+          <input id="oss-prefix" v-model="settings.aliyunOSS.prefix" class="input" placeholder="qiushui-web-clipper" />
           <p class="hint preview">路径预览：{{ ossPathPreview }}</p>
+        </div>
+
+        <div class="field">
+          <label class="label" for="oss-custom-domain">自定义访问域名</label>
+          <input
+            id="oss-custom-domain"
+            v-model="settings.aliyunOSS.customDomain"
+            class="input"
+            placeholder="https://img.example.com"
+            autocomplete="off"
+          />
+          <p class="hint">留空则使用默认 OSS 域名；填写后 Markdown 图片链接会优先使用这个域名。</p>
         </div>
 
         <div class="field test-row">

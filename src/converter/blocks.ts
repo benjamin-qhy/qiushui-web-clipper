@@ -73,7 +73,7 @@ function blockToLine(block: Block, orderedCounters: Record<number, number>): str
       return '---'
 
     case 'image':
-      return `![${block.alt ?? ''}](${block.src ?? ''})`
+      return `![${block.alt ?? ''}](<${block.src ?? ''}>)`
 
     case 'table':
       return tableToMarkdown(block.rows ?? [])

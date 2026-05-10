@@ -3,8 +3,11 @@ import { extractKdocsSpans } from './inline'
 
 export function parseKdocsBlock(blockTile: Element): Block[] {
   // Image: query broadly, works regardless of intermediate wrapper depth
+  // Only accept blob: URLs — loading placeholders (wpscdn GIFs) mean the real
+  // image hasn't loaded yet. Returning [] keeps this block_tile out of
+  // processedIds so collect.ts retries it on the next scroll step.
   const imgs = [...blockTile.querySelectorAll('.picture-wrapper img')]
-    .filter(img => (img as HTMLImageElement).src)
+    .filter(img => (img as HTMLImageElement).src.startsWith('blob:'))
   if (imgs.length > 0) {
     return imgs.map(img => ({
       type: 'image' as const,

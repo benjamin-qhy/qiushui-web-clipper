@@ -15,6 +15,7 @@ const config = {
   bucket: 'test-bucket',
   region: 'oss-cn-hangzhou',
   prefix: '/obsidian//clips/',
+  customDomain: '',
 }
 
 function mockCrypto() {
@@ -61,15 +62,15 @@ describe('formatTimestamp', () => {
 describe('buildObjectKey', () => {
   it('constructs correct path with prefix', () => {
     const key = buildObjectKey({ prefix: 'obsidian', source: 'feishu', notename: '我的笔记', date: fixedDate, ext: 'png' })
-    expect(key).toMatch(/^obsidian\/feishu\/\d{6}\/我的笔记-\d{17}\.png$/)
+    expect(key).toMatch(/^obsidian\/\d{6}\/我的笔记-\d{17}\.png$/)
   })
 
   it('constructs correct path without prefix', () => {
     const key = buildObjectKey({ prefix: '', source: 'feishu', notename: '笔记', date: fixedDate, ext: 'jpg' })
-    expect(key).toMatch(/^feishu\/\d{6}\/笔记-\d{17}\.jpg$/)
+    expect(key).toMatch(/^\d{6}\/笔记-\d{17}\.jpg$/)
   })
 
-  it('normalizes prefix, source, and notename path segments', () => {
+  it('normalizes prefix and notename path segments', () => {
     const key = buildObjectKey({
       prefix: '/obsidian//clips/',
       source: 'fei/shu',
@@ -78,10 +79,10 @@ describe('buildObjectKey', () => {
       ext: 'png',
     })
 
-    expect(key).toMatch(/^obsidian\/clips\/fei-shu\/\d{6}\/我的-笔记-\d{17}\.png$/)
+    expect(key).toMatch(/^obsidian\/clips\/\d{6}\/我的-笔记-\d{17}\.png$/)
   })
 
-  it('replaces dot path segments in prefix, source, and notename', () => {
+  it('replaces dot path segments in prefix and notename', () => {
     const key = buildObjectKey({
       prefix: './obsidian/../clips',
       source: '..',
@@ -90,7 +91,7 @@ describe('buildObjectKey', () => {
       ext: 'png',
     })
 
-    expect(key).toMatch(/^_\/obsidian\/_\/clips\/_\/\d{6}\/_-\d{17}\.png$/)
+    expect(key).toMatch(/^_\/obsidian\/_\/clips\/\d{6}\/_-\d{17}\.png$/)
   })
 })
 
@@ -119,7 +120,7 @@ describe('AliyunOSSUploader', () => {
     const [requestUrl, init] = fetchMock.mock.calls[0]
     expect(requestUrl).toBe(url)
     expect(requestUrl).toMatch(
-      /^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/obsidian\/clips\/fei-shu\/\d{6}\/%E6%88%91%E7%9A%84-%E7%AC%94%E8%AE%B0-\d{17}\.png$/,
+      /^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/obsidian\/clips\/\d{6}\/%E6%88%91%E7%9A%84-%E7%AC%94%E8%AE%B0-\d{17}\.png$/,
     )
     expect(init.method).toBe('PUT')
     expect(init.headers).toMatchObject({
@@ -145,7 +146,7 @@ describe('AliyunOSSUploader', () => {
     expect(sign).toHaveBeenCalledOnce()
     const [, , data] = sign.mock.calls[0]
     const stringToSign = new TextDecoder().decode(data)
-    const objectKey = `obsidian/clips/feishu/202605/note-${formatTimestamp(fixedDate)}.png`
+    const objectKey = `obsidian/clips/202605/note-${formatTimestamp(fixedDate)}.png`
     expect(stringToSign).toBe(
       `PUT\n\nimage/png\n20260509T143022Z\nx-oss-date:20260509T143022Z\n/test-bucket/${objectKey}`,
     )
@@ -165,7 +166,7 @@ describe('AliyunOSSUploader', () => {
     expect(fetchMock).toHaveBeenCalledOnce()
     const [requestUrl] = fetchMock.mock.calls[0]
     expect(requestUrl).toBe(url)
-    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/_\/obsidian\/_\/_\/\d{6}\/_-\d{17}\.png$/)
+    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/_\/obsidian\/_\/\d{6}\/_-\d{17}\.png$/)
   })
 
   it('uploads URL-safe raw base64', async () => {
@@ -181,6 +182,42 @@ describe('AliyunOSSUploader', () => {
 
     const [, init] = fetchMock.mock.calls[0]
     expect(Array.from(init.body)).toEqual([251, 255])
+  })
+
+  it('returns absolute URL with configured custom domain while uploading to OSS endpoint', async () => {
+    const fetchMock = mockFetch()
+    const uploader = new AliyunOSSUploader({
+      ...config,
+      customDomain: 'img.example.com/',
+    })
+
+    const url = await uploader.upload({
+      base64: 'aGVsbG8=',
+      mimeType: 'image/png',
+      notename: 'note',
+      source: 'feishu',
+    })
+
+    const [requestUrl] = fetchMock.mock.calls[0]
+    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/obsidian\/clips\/\d{6}\/note-\d{17}\.png$/)
+    expect(url).toMatch(/^https:\/\/img\.example\.com\/obsidian\/clips\/\d{6}\/note-\d{17}\.png$/)
+  })
+
+  it('preserves explicit scheme in custom domain', async () => {
+    mockFetch()
+    const uploader = new AliyunOSSUploader({
+      ...config,
+      customDomain: 'http://img.example.com/static/',
+    })
+
+    const url = await uploader.upload({
+      base64: 'aGVsbG8=',
+      mimeType: 'image/png',
+      notename: 'note',
+      source: 'feishu',
+    })
+
+    expect(url).toMatch(/^http:\/\/img\.example\.com\/static\/obsidian\/clips\/\d{6}\/note-\d{17}\.png$/)
   })
 
   it('throws status and response text when upload fails', async () => {
@@ -215,6 +252,7 @@ describe('AliyunOSSUploader', () => {
       bucket: ' test-bucket ',
       region: ' oss-cn-hangzhou ',
       prefix: ' clips ',
+      customDomain: ' img.example.com/files/ ',
     })
 
     await uploader.upload({
@@ -225,11 +263,11 @@ describe('AliyunOSSUploader', () => {
     })
 
     const [requestUrl, init] = fetchMock.mock.calls[0]
-    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/clips\/feishu\//)
+    expect(requestUrl).toMatch(/^https:\/\/test-bucket\.oss-cn-hangzhou\.aliyuncs\.com\/clips\/\d{6}\//)
     expect(init.headers.Authorization).toBe('OSS access-key-id:AQID')
 
     const [, , data] = sign.mock.calls[0]
     const stringToSign = new TextDecoder().decode(data)
-    expect(stringToSign).toContain('/test-bucket/clips/feishu/')
+    expect(stringToSign).toContain('/test-bucket/clips/202605/')
   })
 })

@@ -1,37 +1,45 @@
-// src/storage/vault.ts
+const DB_NAME = 'feishu-clipper'
+const STORE_NAME = 'vault'
+const HANDLE_KEY = 'handle'
 
-const STORAGE_KEY = 'obsidianVaultHandle'
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1)
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
 
 export async function getVaultHandle(): Promise<FileSystemDirectoryHandle | null> {
-  const result = await chrome.storage.local.get(STORAGE_KEY)
-  return (result[STORAGE_KEY] as FileSystemDirectoryHandle) ?? null
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const req = tx.objectStore(STORE_NAME).get(HANDLE_KEY)
+    req.onsuccess = () => { db.close(); resolve((req.result as FileSystemDirectoryHandle) ?? null) }
+    req.onerror = () => { db.close(); reject(req.error) }
+  })
 }
 
 export async function setVaultHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-  await chrome.storage.local.set({ [STORAGE_KEY]: handle })
-  // 请求持久化存储，防止浏览器清理
+  const db = await openDB()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const req = tx.objectStore(STORE_NAME).put(handle, HANDLE_KEY)
+    req.onsuccess = () => { db.close(); resolve() }
+    req.onerror = () => { db.close(); reject(req.error) }
+  })
   if (navigator.storage?.persist) {
     await navigator.storage.persist()
   }
 }
 
 export async function clearVaultHandle(): Promise<void> {
-  await chrome.storage.local.remove(STORAGE_KEY)
-}
-
-/**
- * 验证已存储的句柄权限是否仍然有效。
- * 返回 true 表示可以直接使用，false 表示需要重新授权。
- */
-export async function verifyVaultPermission(
-  handle: FileSystemDirectoryHandle
-): Promise<boolean> {
-  try {
-    const permission = await handle.queryPermission({ mode: 'readwrite' })
-    if (permission === 'granted') return true
-    const request = await handle.requestPermission({ mode: 'readwrite' })
-    return request === 'granted'
-  } catch {
-    return false
-  }
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const req = tx.objectStore(STORE_NAME).delete(HANDLE_KEY)
+    req.onsuccess = () => { db.close(); resolve() }
+    req.onerror = () => { db.close(); reject(req.error) }
+  })
 }

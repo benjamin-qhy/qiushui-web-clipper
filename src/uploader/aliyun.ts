@@ -31,9 +31,10 @@ export class AliyunOSSUploader implements ImageUploader {
     })
 
     const encodedKey = objectKey.split('/').map(encodeURIComponent).join('/')
-    const publicUrl = `https://${config.bucket}.${config.region}.aliyuncs.com/${encodedKey}`
+    const uploadUrl = `https://${config.bucket}.${config.region}.aliyuncs.com/${encodedKey}`
+    const publicUrl = buildPublicUrl(config, encodedKey)
 
-    const resp = await fetch(publicUrl, {
+    const resp = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
         'Content-Type': mimeType,
@@ -52,6 +53,7 @@ export class AliyunOSSUploader implements ImageUploader {
           bucket: config.bucket,
           region: config.region,
           prefix: config.prefix,
+          customDomain: config.customDomain,
           ossDate,
           objectKey,
           stringToSign,
@@ -70,13 +72,12 @@ export function buildObjectKey(params: {
   date: Date
   ext: string
 }): string {
-  const { prefix, source, notename, date, ext } = params
+  const { prefix, notename, date, ext } = params
   const yyyymm = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`
   const ts = formatTimestamp(date)
   const prefixSegments = normalizePrefix(prefix)
-  const sourceSegment = safeObjectSegment(source) || 'unknown'
   const noteSegment = safeObjectSegment(notename) || 'untitled'
-  return [...prefixSegments, sourceSegment, yyyymm, `${noteSegment}-${ts}.${ext}`].join('/')
+  return [...prefixSegments, yyyymm, `${noteSegment}-${ts}.${ext}`].join('/')
 }
 
 export function formatTimestamp(d: Date): string {
@@ -180,6 +181,7 @@ function normalizeConfig(config: AliyunOSSConfig): AliyunOSSConfig {
     bucket: config.bucket.trim(),
     region: config.region.trim(),
     prefix: config.prefix.trim(),
+    customDomain: config.customDomain.trim(),
   }
 }
 
@@ -189,6 +191,7 @@ function buildClientDiagnostics(params: {
   bucket: string
   region: string
   prefix: string
+  customDomain: string
   ossDate: string
   objectKey: string
   stringToSign: string
@@ -200,8 +203,25 @@ function buildClientDiagnostics(params: {
     `bucket=${params.bucket}`,
     `region=${params.region}`,
     `prefix=${params.prefix}`,
+    `customDomain=${params.customDomain}`,
     `x-oss-date=${params.ossDate}`,
     `objectKey=${params.objectKey}`,
     `stringToSign=${params.stringToSign}`,
   ].join('\n')
+}
+
+function buildPublicUrl(config: AliyunOSSConfig, encodedKey: string): string {
+  const baseUrl = normalizePublicBaseUrl(config)
+  return `${baseUrl}/${encodedKey}`
+}
+
+function normalizePublicBaseUrl(config: AliyunOSSConfig): string {
+  if (config.customDomain) {
+    const withScheme = /^[a-z]+:\/\//i.test(config.customDomain)
+      ? config.customDomain
+      : `https://${config.customDomain}`
+    return withScheme.replace(/\/+$/g, '')
+  }
+
+  return `https://${config.bucket}.${config.region}.aliyuncs.com`
 }
