@@ -9,6 +9,7 @@ export default defineConfig({
     permissions: ['storage', 'activeTab', 'scripting'],
     host_permissions: [
       '*://*.feishu.cn/*',
+      '*://*.kdocs.cn/*',
       'https://*.aliyuncs.com/*',
     ],
   },
