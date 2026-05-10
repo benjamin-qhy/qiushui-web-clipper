@@ -26,7 +26,7 @@ function walkNodes(node: Node, root: Element, out: Span[]): void {
 function hasBoldAncestor(node: Node, root: Element): boolean {
   let n = node.parentNode
   while (n && n !== root) {
-    if ((n as Element).tagName === 'STRONG') return true
+    if (n instanceof Element && n.tagName === 'STRONG') return true
     n = n.parentNode
   }
   return false
@@ -35,7 +35,7 @@ function hasBoldAncestor(node: Node, root: Element): boolean {
 function hasItalicAncestor(node: Node, root: Element): boolean {
   let n = node.parentNode
   while (n && n !== root) {
-    if ((n as Element).tagName === 'EM') return true
+    if (n instanceof Element && n.tagName === 'EM') return true
     n = n.parentNode
   }
   return false
