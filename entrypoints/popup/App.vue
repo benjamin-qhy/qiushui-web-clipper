@@ -203,7 +203,6 @@ function openSettings() {
 /* 整体容器：固定高度，分三层（标题 / 中间滚动 / 底部固定） */
 .popup {
   width: 380px;
-  height: 520px;
   max-height: 580px;
   font-family: sans-serif;
   display: flex;
@@ -214,7 +213,7 @@ function openSettings() {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  padding: 12px 12px 8px;
+  padding: 12px 0 8px;
   border-bottom: 1px solid #f0f0f0;
   flex-shrink: 0;
 }
@@ -229,18 +228,18 @@ function openSettings() {
 .middle {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px;
+  padding: 8px 0;
   min-height: 0;
 }
 .properties { border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 8px; }
 .properties-toggle { background: none; border: none; width: 100%; text-align: left;
-  padding: 8px 12px; cursor: pointer; font-size: 13px; color: #555; }
-.properties-body { padding: 4px 12px 8px; }
+  padding: 8px 0; cursor: pointer; font-size: 13px; color: #555; }
+.properties-body { padding: 4px 0 8px; }
 .prop-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 12px; }
 .prop-icon { width: 16px; text-align: center; color: #888; }
 .prop-label { width: 70px; color: #666; flex-shrink: 0; }
-.prop-input { flex: 1; border: none; border-bottom: 1px solid #ddd; font-size: 12px;
-  outline: none; padding: 1px 2px; }
+.prop-input { flex: 1; min-width: 0; border: none; border-bottom: 1px solid #ddd; font-size: 12px;
+  outline: none; padding: 1px 2px; overflow: hidden; }
 .prop-row-desc { align-items: flex-start; }
 .prop-textarea { flex: 1; border: 1px solid #ddd; border-radius: 3px; font-size: 11px;
   outline: none; padding: 2px 4px; resize: vertical; font-family: sans-serif; line-height: 1.4; }
@@ -249,7 +248,7 @@ function openSettings() {
   min-height: 120px; resize: vertical; font-family: sans-serif; line-height: 1.5;
   outline: none; }
 /* 底部固定 */
-.footer { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 12px; border-top: 1px solid #f0f0f0; }
+.footer { flex-shrink: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 0 12px; border-top: 1px solid #f0f0f0; }
 .save-row { display: flex; gap: 2px; position: relative; }
 .btn-save { flex: 1; background: #6e4dc4; color: white; border: none; border-radius: 6px 0 0 6px;
   padding: 10px; font-size: 14px; font-weight: 500; cursor: pointer; }

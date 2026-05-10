@@ -102,7 +102,7 @@ async function testConnection() {
 
 <template>
   <main class="page">
-    <h1 class="title">飞书文档 → Obsidian 设置</h1>
+    <h1 class="title">秋水 · 网页剪藏 · 设置</h1>
 
     <section class="section">
       <h2 class="section-title">Vault 配置</h2>

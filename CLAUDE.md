@@ -19,6 +19,8 @@ pnpm vitest run tests/converter/blocks.test.ts  # 运行单个测试文件
 
 测试使用 jsdom 环境，测试文件在 `tests/` 目录下。
 
+每次修改源文件后，必须运行 `pnpm build` 重新编译，确保 `.output/chrome-mv3/` 下的产物是最新的。
+
 ## 架构概览
 
 ### 消息流
