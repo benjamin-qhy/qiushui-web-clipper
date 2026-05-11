@@ -3,7 +3,11 @@ import { getSettings, saveSettings, DEFAULT_SETTINGS } from '../storage/settings
 import type { Settings } from '../storage/settings'
 
 export function useSettings() {
-  const settings = ref<Settings>({ ...DEFAULT_SETTINGS, aliyunOSS: { ...DEFAULT_SETTINGS.aliyunOSS } })
+  const settings = ref<Settings>({
+    ...DEFAULT_SETTINGS,
+    aliyunOSS: { ...DEFAULT_SETTINGS.aliyunOSS },
+    aiConfig: { ...DEFAULT_SETTINGS.aiConfig },
+  })
   const isSaving = ref(false)
   const saveStatus = ref<'idle' | 'saved' | 'error'>('idle')
   let resetStatusTimer: ReturnType<typeof setTimeout> | undefined
@@ -20,6 +24,7 @@ export function useSettings() {
     return {
       ...settings.value,
       aliyunOSS: { ...settings.value.aliyunOSS },
+      aiConfig: { ...settings.value.aiConfig },
     }
   }
 

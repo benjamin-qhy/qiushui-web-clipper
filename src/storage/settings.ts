@@ -9,11 +9,21 @@ export interface AliyunOSSConfig {
   customDomain: string
 }
 
+export interface AIConfig {
+  baseUrl: string
+  apiKey: string
+  model: string
+}
+
 export interface Settings {
   subDir: string
   imageMode: 'local' | 'oss'
   ossProvider: 'aliyun'
   aliyunOSS: AliyunOSSConfig
+  aiConfig: AIConfig
+  bookmarkInboxFolder: string
+  processInterval: number
+  bookmarkSubDir: string
 }
 
 const STORAGE_KEY = 'feishu-clipper-settings'
@@ -30,6 +40,14 @@ export const DEFAULT_SETTINGS: Settings = {
     prefix: 'qiushui-web-clipper',
     customDomain: '',
   },
+  aiConfig: {
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: '',
+    model: 'qwen-long',
+  },
+  bookmarkInboxFolder: '待整理',
+  processInterval: 6,
+  bookmarkSubDir: 'Bookmarks',
 }
 
 export async function getSettings(): Promise<Settings> {
@@ -39,6 +57,7 @@ export async function getSettings(): Promise<Settings> {
     ...DEFAULT_SETTINGS,
     ...stored,
     aliyunOSS: { ...DEFAULT_SETTINGS.aliyunOSS, ...stored.aliyunOSS },
+    aiConfig: { ...DEFAULT_SETTINGS.aiConfig, ...stored.aiConfig },
   }
 }
 
