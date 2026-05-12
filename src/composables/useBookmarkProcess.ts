@@ -51,7 +51,6 @@ export function useBookmarkProcess() {
 
       for (const bm of bookmarks) {
         if (abortFlag) { state.value = 'aborted'; break }
-        if (!bm.url) continue
 
         try {
           const pageText = await fetchPageText(bm.url)
