@@ -52,13 +52,13 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
         @dragstart="onDragStart($event, bm.id)"
       >
         <img
-          :src="faviconUrl(bm.url!)"
+          :src="faviconUrl(bm.url || '')"
           class="favicon"
           @error="onFaviconError"
           width="16"
           height="16"
         />
-        <div class="bm-content" @click="emit('openBookmark', bm.url!)">
+        <div class="bm-content" @click="bm.url && emit('openBookmark', bm.url)">
           <span class="bm-title">{{ bm.title || bm.url }}</span>
           <span class="bm-url">{{ bm.url }}</span>
         </div>
