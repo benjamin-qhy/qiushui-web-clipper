@@ -61,7 +61,7 @@ async function handleCopy() {
   <div class="popup">
     <!-- 非飞书文档页 -->
     <div v-if="!isFeishuDoc && !docContent.isLoading.value" class="empty-state">
-      <p>请在飞书文档页面使用此插件</p>
+      <p>{{ docContent.error.value || '请在飞书文档页面使用此插件' }}</p>
     </div>
 
     <!-- 加载中 -->
