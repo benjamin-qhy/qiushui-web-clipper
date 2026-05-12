@@ -81,6 +81,10 @@ async function handleCopy() {
 function openSettings() {
   return browser.runtime.openOptionsPage()
 }
+
+function openBookmarks() {
+  browser.tabs.create({ url: browser.runtime.getURL('/bookmarks.html') })
+}
 </script>
 
 <template>
@@ -102,6 +106,7 @@ function openSettings() {
       <div class="title-row">
         <h2 class="doc-title">{{ doc.title }}</h2>
         <button class="btn-gear" title="设置" @click="openSettings">⚙</button>
+        <button class="btn-bookmark" title="整理书签" @click="openBookmarks">⊞</button>
       </div>
 
       <!-- 中间可滚动区域 -->
@@ -224,6 +229,9 @@ function openSettings() {
 .btn-gear { background: none; border: none; cursor: pointer; font-size: 16px; color: #888;
   padding: 0 2px; line-height: 1; flex-shrink: 0; }
 .btn-gear:hover { color: #444; }
+.btn-bookmark { background: none; border: none; cursor: pointer; font-size: 16px; color: #888;
+  padding: 0 2px; line-height: 1; flex-shrink: 0; }
+.btn-bookmark:hover { color: #444; }
 /* 中间区域可滚动 */
 .middle {
   flex: 1;
