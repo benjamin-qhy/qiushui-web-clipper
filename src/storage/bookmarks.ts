@@ -7,3 +7,8 @@ export interface BookmarkRecord {
   category: string
   processedAt: number
 }
+
+export async function saveBookmarkRecord(record: BookmarkRecord): Promise<void> {
+  const key = `bookmark:${record.id}`
+  await chrome.storage.local.set({ [key]: record })
+}
