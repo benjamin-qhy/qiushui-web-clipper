@@ -1,5 +1,12 @@
 import { sanitizeFilename, resolveFilename } from '../converter/filename'
 
+export async function getDir(
+  parent: FileSystemDirectoryHandle,
+  name: string,
+): Promise<FileSystemDirectoryHandle> {
+  return parent.getDirectoryHandle(name, { create: true })
+}
+
 /**
  * 将内容写入 vault 的指定子目录，自动创建目录，处理文件名冲突。
  * @returns 实际写入的文件名（含 .md 扩展名）
