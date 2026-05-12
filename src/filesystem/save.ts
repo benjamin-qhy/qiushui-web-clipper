@@ -49,7 +49,7 @@ export async function saveToVault(
   return filename
 }
 
-async function getDir(
+export async function getDir(
   parent: FileSystemDirectoryHandle,
   name: string,
 ): Promise<FileSystemDirectoryHandle> {
