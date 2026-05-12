@@ -22,6 +22,7 @@ export function useBookmarkTree() {
   const processedIds = ref<Set<string>>(new Set())
   const dragOverFolderId = ref<string | null>(null)
   const expandedIds = ref<Set<string>>(new Set())
+  const error = ref<string | null>(null)
 
   function buildFolderTree(nodes: BookmarkNode[]): FolderNode[] {
     return nodes
@@ -36,12 +37,18 @@ export function useBookmarkTree() {
   }
 
   async function loadTree() {
-    const roots = await browser.bookmarks.getTree()
-    // roots[0] is the invisible root; its children are Bookmarks Bar, Other Bookmarks, etc.
-    folderTree.value = buildFolderTree(roots[0].children ?? [])
+    try {
+      const roots = await browser.bookmarks.getTree()
+      if (roots.length === 0) return
+      // roots[0] is the invisible root; its children are Bookmarks Bar, Other Bookmarks, etc.
+      folderTree.value = buildFolderTree(roots[0].children ?? [])
 
-    const records = await getAllBookmarkRecords()
-    processedIds.value = new Set(records.map(r => r.id))
+      const records = await getAllBookmarkRecords()
+      processedIds.value = new Set(records.map(r => r.id))
+      error.value = null
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    }
   }
 
   async function selectFolder(folderId: string) {
@@ -50,24 +57,25 @@ export function useBookmarkTree() {
     selectedBookmarks.value = children.filter(n => !!n.url)
   }
 
-  function toggleExpand(folderId: string) {
-    if (expandedIds.value.has(folderId)) {
-      expandedIds.value.delete(folderId)
+  async function toggleExpand(folderId: string) {
+    const next = new Set(expandedIds.value)
+    if (next.has(folderId)) {
+      next.delete(folderId)
     } else {
-      expandedIds.value.add(folderId)
+      next.add(folderId)
     }
-    // Rebuild tree to reflect new expanded state
-    loadTree()
+    expandedIds.value = next
+    await loadTree()
   }
 
   async function createFolder(parentId: string, title: string): Promise<void> {
     await browser.bookmarks.create({ parentId, title })
-    await loadTree()
+    await loadTree().catch(() => {})
   }
 
   async function renameFolder(id: string, title: string): Promise<void> {
     await browser.bookmarks.update(id, { title })
-    await loadTree()
+    await loadTree().catch(() => {})
   }
 
   async function deleteFolder(folderId: string): Promise<void> {
@@ -90,13 +98,17 @@ export function useBookmarkTree() {
     collect(subtree[0].children ?? [])
 
     // 3. Move each bookmark to inbox
-    for (const bm of bookmarkNodes) {
-      await browser.bookmarks.move(bm.id, { parentId: inbox.id })
+    try {
+      for (const bm of bookmarkNodes) {
+        await browser.bookmarks.move(bm.id, { parentId: inbox.id })
+      }
+    } catch (e) {
+      throw new Error(`部分书签移动失败，操作已中止: ${e instanceof Error ? e.message : String(e)}`)
     }
 
     // 4. Remove the now-empty folder tree
     await browser.bookmarks.removeTree(folderId)
-    await loadTree()
+    await loadTree().catch(() => {})
 
     // If deleted folder was selected, clear selection
     if (selectedFolderId.value === folderId) {
@@ -107,7 +119,7 @@ export function useBookmarkTree() {
 
   async function moveFolder(folderId: string, targetParentId: string): Promise<void> {
     await browser.bookmarks.move(folderId, { parentId: targetParentId })
-    await loadTree()
+    await loadTree().catch(() => {})
   }
 
   async function deleteBookmark(id: string): Promise<void> {
@@ -130,6 +142,7 @@ export function useBookmarkTree() {
     selectedBookmarks,
     processedIds,
     dragOverFolderId,
+    error,
     loadTree,
     selectFolder,
     toggleExpand,
