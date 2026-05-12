@@ -1,9 +1,11 @@
 // src/composables/useBookmarkTree.ts
 import { ref } from 'vue'
+import { browser } from 'wxt/browser'
+import type { Browser } from 'wxt/browser'
 import { getSettings } from '../storage/settings'
 import { getAllBookmarkRecords } from '../storage/bookmarks'
 
-export type BookmarkNode = chrome.bookmarks.BookmarkTreeNode
+export type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
 export interface FolderNode {
   id: string
@@ -36,7 +38,7 @@ export function useBookmarkTree() {
 
   async function loadTree() {
     try {
-      const roots = await chrome.bookmarks.getTree()
+      const roots = await browser.bookmarks.getTree()
       if (roots.length === 0) return
       // roots[0] is the invisible root; its children are Bookmarks Bar, Other Bookmarks, etc.
       folderTree.value = buildFolderTree(roots[0].children ?? [])
@@ -51,7 +53,7 @@ export function useBookmarkTree() {
 
   async function selectFolder(folderId: string) {
     selectedFolderId.value = folderId
-    const children = await chrome.bookmarks.getChildren(folderId)
+    const children = await browser.bookmarks.getChildren(folderId)
     selectedBookmarks.value = children.filter(n => !!n.url)
   }
 
@@ -67,12 +69,12 @@ export function useBookmarkTree() {
   }
 
   async function createFolder(parentId: string, title: string): Promise<void> {
-    await chrome.bookmarks.create({ parentId, title })
+    await browser.bookmarks.create({ parentId, title })
     await loadTree().catch(() => {})
   }
 
   async function renameFolder(id: string, title: string): Promise<void> {
-    await chrome.bookmarks.update(id, { title })
+    await browser.bookmarks.update(id, { title })
     await loadTree().catch(() => {})
   }
 
@@ -80,11 +82,11 @@ export function useBookmarkTree() {
     // 1. Find 待整理 folder
     const settings = await getSettings()
     const inboxName = settings.bookmarkInboxFolder
-    const results = await chrome.bookmarks.search({ title: inboxName })
+    const results = await browser.bookmarks.search({ title: inboxName })
     const inbox = results.find(r => !r.url)
 
     // 2. Collect all bookmark nodes in this folder subtree
-    const subtree = await chrome.bookmarks.getSubTree(folderId)
+    const subtree = await browser.bookmarks.getSubTree(folderId)
     const bookmarkNodes: BookmarkNode[] = []
     function collect(nodes: BookmarkNode[]) {
       for (const n of nodes) {
@@ -97,12 +99,12 @@ export function useBookmarkTree() {
     // 3. Move each bookmark to inbox (if inbox exists), otherwise just delete them
     if (inbox) {
       for (const bm of bookmarkNodes) {
-        await chrome.bookmarks.move(bm.id, { parentId: inbox.id })
+        await browser.bookmarks.move(bm.id, { parentId: inbox.id })
       }
     }
 
     // 4. Remove the folder tree (removeTree handles non-empty folders too)
-    await chrome.bookmarks.removeTree(folderId)
+    await browser.bookmarks.removeTree(folderId)
     await loadTree().catch(() => {})
 
     // If deleted folder was selected, clear selection
@@ -113,19 +115,19 @@ export function useBookmarkTree() {
   }
 
   async function moveFolder(folderId: string, targetParentId: string): Promise<void> {
-    await chrome.bookmarks.move(folderId, { parentId: targetParentId })
+    await browser.bookmarks.move(folderId, { parentId: targetParentId })
     await loadTree().catch(() => {})
   }
 
   async function deleteBookmark(id: string): Promise<void> {
-    await chrome.bookmarks.remove(id)
+    await browser.bookmarks.remove(id)
     if (selectedFolderId.value) {
       await selectFolder(selectedFolderId.value)
     }
   }
 
   async function moveBookmark(bookmarkId: string, targetFolderId: string): Promise<void> {
-    await chrome.bookmarks.move(bookmarkId, { parentId: targetFolderId })
+    await browser.bookmarks.move(bookmarkId, { parentId: targetFolderId })
     if (selectedFolderId.value) {
       await selectFolder(selectedFolderId.value)
     }

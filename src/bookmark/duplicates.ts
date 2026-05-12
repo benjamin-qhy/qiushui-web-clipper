@@ -1,5 +1,6 @@
 interface MinimalBookmark {
   id: string
+  title?: string
   url?: string
   dateAdded?: number
 }

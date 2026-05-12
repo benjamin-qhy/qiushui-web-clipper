@@ -83,7 +83,7 @@ function openSettings() {
 }
 
 function openBookmarks() {
-  browser.tabs.create({ url: browser.runtime.getURL('/bookmarks.html') })
+  browser.tabs.create({ url: '/bookmarks.html' })
 }
 </script>
 

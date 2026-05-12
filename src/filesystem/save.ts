@@ -19,7 +19,6 @@ export async function saveImageToVault(
   await writable.write(bytes)
   await writable.close()
 }
-
 export async function saveToVault(
   vaultHandle: FileSystemDirectoryHandle,
   subDir: string,
