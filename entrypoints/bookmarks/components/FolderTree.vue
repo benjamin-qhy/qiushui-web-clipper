@@ -56,7 +56,9 @@ function onDragOver(e: DragEvent, folderId: string) {
   emit('dragOver', folderId)
 }
 
-function onDragLeave() {
+function onDragLeave(e: DragEvent) {
+  const related = e.relatedTarget as Element | null
+  if (related && (e.currentTarget as Element).contains(related)) return
   emit('dragOver', null)
 }
 
@@ -112,6 +114,7 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
           <input
             class="inline-input"
             v-model="editingTitle"
+            autofocus
             @keyup.enter="confirmRename(node.id)"
             @keyup.escape="editingId = null"
             @blur="confirmRename(node.id)"
@@ -132,6 +135,7 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
         <input
           class="inline-input"
           v-model="newFolderTitle"
+          autofocus
           placeholder="文件夹名称"
           @keyup.enter="confirmCreate(node.id)"
           @keyup.escape="creatingIn = null"
