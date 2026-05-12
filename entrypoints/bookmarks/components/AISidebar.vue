@@ -36,9 +36,14 @@ async function triggerProcessing() {
   isTriggering.value = true
   exportResult.value = null
   exportError.value = null
-  await browser.runtime.sendMessage({ type: 'PROCESS_BOOKMARKS' })
-  await refreshStatus()
-  isTriggering.value = false
+  try {
+    await browser.runtime.sendMessage({ type: 'PROCESS_BOOKMARKS' })
+    await refreshStatus()
+  } catch (e) {
+    exportError.value = e instanceof Error ? e.message : String(e)
+  } finally {
+    isTriggering.value = false
+  }
 }
 
 async function handleExport() {
