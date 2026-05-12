@@ -12,7 +12,17 @@ export function buildFrontmatter(meta: DocMeta): string {
   }
   lines.push(meta.published ? `published: ${meta.published}` : 'published:')
   lines.push(`created: ${meta.created}`)
-  lines.push('description:')
+  if (meta.description) {
+    const desc = meta.description.trim()
+    if (desc.includes('\n')) {
+      lines.push('description: |')
+      for (const l of desc.split('\n')) lines.push(`  ${l}`)
+    } else {
+      lines.push(`description: "${desc.replace(/"/g, '\\"')}"`)
+    }
+  } else {
+    lines.push('description:')
+  }
   lines.push('tags:')
   lines.push('  - "clippings"')
   lines.push('---')

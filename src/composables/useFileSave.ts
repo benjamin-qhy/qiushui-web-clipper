@@ -1,8 +1,13 @@
 import { ref } from 'vue'
-import { saveToVault } from '../filesystem/save'
+import { browser } from 'wxt/browser'
+import { saveToVault, saveImageToVault } from '../filesystem/save'
 import { buildFrontmatter } from '../converter/frontmatter'
 import { blocksToMarkdown } from '../converter/blocks'
-import type { DocContent } from '../types'
+import { sanitizeFilename } from '../converter/filename'
+import { getSettings } from '../storage/settings'
+import { createUploader } from '../uploader/index'
+import type { ImageUploader } from '../uploader/types'
+import type { Block, DocContent, MessageResponse } from '../types'
 
 export function useFileSave() {
   const savedFilename = ref<string | null>(null)
@@ -12,18 +17,33 @@ export function useFileSave() {
   async function save(
     vaultHandle: FileSystemDirectoryHandle,
     doc: DocContent,
-    subDir: string
   ) {
     isSaving.value = true
     error.value = null
     savedFilename.value = null
 
     try {
+      const settings = await getSettings()
+      const uploader = createUploader(settings)
+      const notename = sanitizeFilename(doc.title)
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+      const blocks =
+        tab?.id != null
+          ? await downloadAndReplaceImages(
+              doc.blocks,
+              tab.id,
+              vaultHandle,
+              settings.subDir,
+              notename,
+              uploader,
+            )
+          : doc.blocks
+
       const frontmatter = buildFrontmatter(doc)
-      const body = blocksToMarkdown(doc.blocks)
+      const body = blocksToMarkdown(blocks)
       const content = `${frontmatter}\n${body}\n`
 
-      const filename = await saveToVault(vaultHandle, subDir, doc.title, content)
+      const filename = await saveToVault(vaultHandle, settings.subDir, doc.title, content)
       savedFilename.value = filename
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -40,4 +60,76 @@ export function useFileSave() {
   }
 
   return { savedFilename, error, isSaving, save, copyToClipboard }
+}
+
+function mimeToExt(mimeType: string): string {
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg', 'image/jpg': 'jpg',
+    'image/png': 'png', 'image/gif': 'gif',
+    'image/webp': 'webp', 'image/svg+xml': 'svg',
+  }
+  return map[mimeType] ?? 'png'
+}
+
+async function downloadAndReplaceImages(
+  blocks: Block[],
+  tabId: number,
+  vaultHandle: FileSystemDirectoryHandle,
+  subDir: string,
+  notename: string,
+  uploader: ImageUploader | null,
+): Promise<Block[]> {
+  let imageIndex = 0
+  const result: Block[] = []
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+
+  for (const block of blocks) {
+    if (block.type !== 'image' || !block.src) {
+      result.push(block)
+      continue
+    }
+
+    imageIndex++
+    try {
+      let base64: string
+      let mimeType: string
+
+      if (block.src.startsWith('data:')) {
+        const [header, b64] = block.src.split(',')
+        if (!b64) {
+          result.push(block)
+          continue
+        }
+        const mimeMatch = header.match(/data:([^;]+)/)
+        mimeType = mimeMatch?.[1] ?? 'image/png'
+        base64 = b64
+      } else {
+        const resp = (await browser.tabs.sendMessage(tabId, {
+          type: 'DOWNLOAD_IMAGE',
+          url: block.src,
+        })) as MessageResponse
+
+        if (!resp.ok || !('base64' in resp) || !('mimeType' in resp)) {
+          result.push(block)
+          continue
+        }
+        mimeType = resp.mimeType
+        base64 = resp.base64
+      }
+
+      if (uploader) {
+        const url = await uploader.upload({ base64, mimeType, notename, source: 'feishu' })
+        result.push({ ...block, src: url })
+      } else {
+        const ext = mimeToExt(mimeType)
+        const filename = `${notename}-${date}-${imageIndex}.${ext}`
+        await saveImageToVault(vaultHandle, subDir, notename, filename, base64)
+        result.push({ ...block, src: `${notename}.assets/${filename}` })
+      }
+    } catch {
+      result.push(block)
+    }
+  }
+
+  return result
 }

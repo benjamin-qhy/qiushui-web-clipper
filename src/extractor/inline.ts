@@ -3,12 +3,12 @@ import type { Span } from '../types'
 export function extractSpans(el: Element): Span[] {
   const spans: Span[] = []
 
-  // 飞书文档行内元素通常是 <span> 包含 data-* 属性
-  const leaves = el.querySelectorAll('[data-leaf], span[class*="text-"]')
+  const allLeaves = el.querySelectorAll('[data-leaf], span[class*="text-"]')
+  // Only process leaves that belong directly to this block, not to nested child blocks
+  const leaves = [...allLeaves].filter(leaf => !isInsideNestedBlock(leaf, el))
 
   if (leaves.length === 0) {
-    // fallback: 直接取 textContent
-    const text = el.textContent?.trim() ?? ''
+    const text = ownTextContent(el).trim()
     if (text) spans.push({ text })
     return spans
   }
@@ -46,4 +46,28 @@ export function extractSpans(el: Element): Span[] {
   }
 
   return spans
+}
+
+function isInsideNestedBlock(leaf: Element, root: Element): boolean {
+  let node = leaf.parentElement
+  while (node && node !== root) {
+    if (node.hasAttribute('data-block-type')) return true
+    node = node.parentElement
+  }
+  return false
+}
+
+function ownTextContent(el: Element): string {
+  let text = ''
+  for (const node of el.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += node.textContent ?? ''
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const child = node as Element
+      if (!child.hasAttribute('data-block-type')) {
+        text += ownTextContent(child)
+      }
+    }
+  }
+  return text
 }

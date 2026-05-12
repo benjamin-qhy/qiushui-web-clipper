@@ -45,6 +45,7 @@ export interface DocMeta {
   author?: string         // 原始作者名（不含 [[]]，由 frontmatter 模块加工）
   published?: string      // ISO 日期字符串，如 "2026-04-01"
   created: string         // ISO 日期字符串，保存时自动填入
+  description?: string    // AI速览文本（如有）
 }
 
 export interface DocContent extends DocMeta {
@@ -54,7 +55,9 @@ export interface DocContent extends DocMeta {
 // Content Script ↔ Popup 消息协议
 export type MessageRequest =
   | { type: 'EXTRACT_DOC' }
+  | { type: 'DOWNLOAD_IMAGE'; url: string }
 
 export type MessageResponse =
   | { ok: true; data: DocContent }
+  | { ok: true; base64: string; mimeType: string }
   | { ok: false; error: string }
