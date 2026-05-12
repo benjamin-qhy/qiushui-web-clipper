@@ -82,7 +82,6 @@ export function useBookmarkTree() {
     const inboxName = settings.bookmarkInboxFolder
     const results = await chrome.bookmarks.search({ title: inboxName })
     const inbox = results.find(r => !r.url)
-    if (!inbox) throw new Error(`找不到"${inboxName}"文件夹，请先创建它`)
 
     // 2. Collect all bookmark nodes in this folder subtree
     const subtree = await chrome.bookmarks.getSubTree(folderId)
@@ -95,16 +94,14 @@ export function useBookmarkTree() {
     }
     collect(subtree[0].children ?? [])
 
-    // 3. Move each bookmark to inbox
-    try {
+    // 3. Move each bookmark to inbox (if inbox exists), otherwise just delete them
+    if (inbox) {
       for (const bm of bookmarkNodes) {
         await chrome.bookmarks.move(bm.id, { parentId: inbox.id })
       }
-    } catch (e) {
-      throw new Error(`部分书签移动失败，操作已中止: ${e instanceof Error ? e.message : String(e)}`)
     }
 
-    // 4. Remove the now-empty folder tree
+    // 4. Remove the folder tree (removeTree handles non-empty folders too)
     await chrome.bookmarks.removeTree(folderId)
     await loadTree().catch(() => {})
 

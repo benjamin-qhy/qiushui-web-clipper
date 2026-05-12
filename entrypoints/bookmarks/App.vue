@@ -25,12 +25,17 @@ const selectedFolderTitle = computed(() =>
 )
 
 async function handleSelect(folderId: string) {
-  await tree.selectFolder(folderId)
+  await tree.selectFolder(folderId).catch(setError)
 }
 
 function handleOpenBookmark(url: string) {
   browser.tabs.create({ url })
 }
+
+function setError(e: unknown) {
+  tree.error.value = e instanceof Error ? e.message : String(e)
+}
+
 </script>
 
 <template>
@@ -43,12 +48,12 @@ function handleOpenBookmark(url: string) {
           :selected-id="tree.selectedFolderId.value"
           :drag-over-id="tree.dragOverFolderId.value"
           @select="handleSelect"
-          @toggle-expand="tree.toggleExpand"
-          @create-folder="(parentId, title) => tree.createFolder(parentId, title)"
-          @rename-folder="(id, title) => tree.renameFolder(id, title)"
-          @delete-folder="tree.deleteFolder"
-          @move-folder="(folderId, targetId) => tree.moveFolder(folderId, targetId)"
-          @move-bookmark="(bmId, folderId) => tree.moveBookmark(bmId, folderId)"
+          @toggle-expand="(id) => tree.toggleExpand(id).catch(setError)"
+          @create-folder="(parentId, title) => tree.createFolder(parentId, title).catch(setError)"
+          @rename-folder="(id, title) => tree.renameFolder(id, title).catch(setError)"
+          @delete-folder="(id) => tree.deleteFolder(id).catch(setError)"
+          @move-folder="(folderId, targetId) => tree.moveFolder(folderId, targetId).catch(setError)"
+          @move-bookmark="(bmId, folderId) => tree.moveBookmark(bmId, folderId).catch(setError)"
           @drag-over="(id) => { tree.dragOverFolderId.value = id }"
         />
       </div>
@@ -59,7 +64,7 @@ function handleOpenBookmark(url: string) {
         :bookmarks="tree.selectedBookmarks.value"
         :processed-ids="tree.processedIds.value"
         :folder-title="selectedFolderTitle"
-        @delete-bookmark="tree.deleteBookmark"
+        @delete-bookmark="(id) => tree.deleteBookmark(id).catch(setError)"
         @open-bookmark="handleOpenBookmark"
       />
     </div>
