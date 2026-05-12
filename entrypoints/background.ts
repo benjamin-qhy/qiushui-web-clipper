@@ -35,7 +35,7 @@ async function triggerProcessing(): Promise<void> {
 
   try {
     const settings = await getSettings()
-    const inboxFolderName = settings.bookmarkInboxFolder || '待整理'
+    const inboxFolderName = settings.bookmarkInboxFolder
 
     // Find inbox folder
     const searchResults = await browser.bookmarks.search({ title: inboxFolderName })
