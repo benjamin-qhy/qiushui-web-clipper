@@ -7,6 +7,7 @@ const { settings, isSaving, saveStatus, load, save } = useSettings()
 const vault = useVaultStore()
 
 const showSecret = ref(false)
+const showAISecret = ref(false)
 const testStatus = ref<'idle' | 'testing' | 'ok' | 'fail'>('idle')
 const testError = ref('')
 
@@ -213,6 +214,85 @@ async function testConnection() {
           <span v-else-if="testStatus === 'fail'" class="test-fail">✗ {{ testError }}</span>
         </div>
       </template>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">AI 配置</h2>
+
+      <div class="field">
+        <label class="label" for="ai-base-url">API 地址</label>
+        <input
+          id="ai-base-url"
+          v-model="settings.aiConfig.baseUrl"
+          class="input"
+          placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
+        />
+        <p class="hint">支持任意 OpenAI 兼容接口，默认为阿里云通义千问。</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="ai-api-key">API Key</label>
+        <div class="secret-row">
+          <input
+            id="ai-api-key"
+            v-model="settings.aiConfig.apiKey"
+            :type="showAISecret ? 'text' : 'password'"
+            class="input"
+            autocomplete="off"
+          />
+          <button class="btn-secondary" type="button" @click="showAISecret = !showAISecret">
+            {{ showAISecret ? '隐藏' : '显示' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="ai-model">模型</label>
+        <input
+          id="ai-model"
+          v-model="settings.aiConfig.model"
+          class="input"
+          placeholder="qwen-long"
+        />
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">书签整理</h2>
+
+      <div class="field">
+        <label class="label" for="bookmark-inbox">待整理文件夹名称</label>
+        <input
+          id="bookmark-inbox"
+          v-model="settings.bookmarkInboxFolder"
+          class="input"
+          placeholder="待整理"
+        />
+        <p class="hint">将书签收藏到该文件夹后，插件会自动整理其中的内容。</p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="process-interval">自动整理间隔（小时）</label>
+        <input
+          id="process-interval"
+          v-model.number="settings.processInterval"
+          class="input"
+          type="number"
+          min="1"
+          max="168"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label" for="bookmark-sub-dir">Obsidian 书签子目录</label>
+        <input
+          id="bookmark-sub-dir"
+          v-model="settings.bookmarkSubDir"
+          class="input"
+          placeholder="Bookmarks"
+        />
+        <p class="hint">整理后的书签笔记将保存到 Vault 下的此子目录中。</p>
+      </div>
     </section>
 
     <footer class="footer">
