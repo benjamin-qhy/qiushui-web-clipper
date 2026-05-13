@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+import { filterBookmarkListItems } from '../../../src/bookmark/filter'
 import type { BookmarkListItem } from '../../../src/composables/useBookmarkTree'
 
 const props = defineProps<{
@@ -14,6 +16,9 @@ const emit = defineEmits<{
   exportMarkdown: []
   exportObsidian: []
 }>()
+
+const searchQuery = ref('')
+const filteredBookmarks = computed(() => filterBookmarkListItems(props.bookmarks, searchQuery.value))
 
 function getDomain(url: string): string {
   try { return new URL(url).hostname } catch { return '' }
@@ -39,7 +44,15 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   <div class="list-panel">
     <div class="list-header">
       <h2 class="folder-title">{{ folderTitle || '请选择文件夹' }}</h2>
-      <span class="count" v-if="bookmarks.length > 0">{{ bookmarks.length }} 条</span>
+      <div v-if="folderTitle" class="search-box">
+        <input
+          v-model="searchQuery"
+          class="search-input"
+          type="search"
+          placeholder="搜索当前列表..."
+        />
+      </div>
+      <span class="count" v-if="bookmarks.length > 0">{{ filteredBookmarks.length }} 条</span>
       <div class="export-actions">
         <button class="export-btn" :disabled="props.isExporting" @click="emit('exportMarkdown')">
           {{ props.isExporting ? '导出中...' : '导出书签栏 MD' }}
@@ -54,9 +67,11 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 
     <div v-else-if="bookmarks.length === 0" class="empty-hint">此文件夹暂无书签</div>
 
+    <div v-else-if="filteredBookmarks.length === 0" class="empty-hint">未找到匹配书签</div>
+
     <ul v-else class="bookmark-list">
       <li
-        v-for="bm in bookmarks"
+        v-for="bm in filteredBookmarks"
         :key="bm.id"
         class="bookmark-item"
         draggable="true"
@@ -86,6 +101,18 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 .list-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
 .folder-title { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
 .count { font-size: 12px; color: #888; }
+.search-box { flex: 0 1 260px; min-width: 160px; }
+.search-input {
+  width: 100%;
+  height: 28px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #333;
+  outline: none;
+}
+.search-input:focus { border-color: #bca9ef; box-shadow: 0 0 0 2px #f1ebff; }
 .export-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .export-btn {
   border: 1px solid #d7d0ea;
