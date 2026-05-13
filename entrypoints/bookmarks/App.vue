@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onBeforeUnmount, onMounted, computed, ref } from 'vue'
 import { browser } from 'wxt/browser'
 import { useBookmarkTree } from '../../src/composables/useBookmarkTree'
 import {
@@ -18,8 +18,15 @@ const tree = useBookmarkTree()
 const vault = useVaultStore()
 const isExporting = ref(false)
 const successMessage = ref<string | null>(null)
+let successTimer: number | null = null
 
 onMounted(() => tree.loadTree())
+
+onBeforeUnmount(() => {
+  if (successTimer !== null) {
+    window.clearTimeout(successTimer)
+  }
+})
 
 function findTitle(nodes: FolderNode[], id: string): string {
   for (const n of nodes) {
@@ -47,9 +54,14 @@ function todayString(): string {
 }
 
 function setSuccess(message: string) {
+  tree.error.value = null
+  if (successTimer !== null) {
+    window.clearTimeout(successTimer)
+  }
   successMessage.value = message
-  window.setTimeout(() => {
+  successTimer = window.setTimeout(() => {
     if (successMessage.value === message) successMessage.value = null
+    successTimer = null
   }, 3000)
 }
 
@@ -95,7 +107,7 @@ async function handleExportObsidian() {
         await vault.authorize()
       }
     }
-    if (!vault.handle.value) throw new Error('未授权 Obsidian Vault')
+    if (!vault.isAuthorized.value || !vault.handle.value) throw new Error('未授权 Obsidian Vault')
 
     const date = todayString()
     const bookmarksBar = await getBookmarksBarOrThrow()
@@ -110,6 +122,11 @@ async function handleExportObsidian() {
 }
 
 function setError(e: unknown) {
+  successMessage.value = null
+  if (successTimer !== null) {
+    window.clearTimeout(successTimer)
+    successTimer = null
+  }
   tree.error.value = e instanceof Error ? e.message : String(e)
 }
 
