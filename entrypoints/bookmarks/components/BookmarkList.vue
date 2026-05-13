@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { BookmarkNode } from '../../../src/composables/useBookmarkTree'
+import type { BookmarkListItem } from '../../../src/composables/useBookmarkTree'
 
 const props = defineProps<{
-  bookmarks: BookmarkNode[]
+  bookmarks: BookmarkListItem[]
   processedIds: Set<string>
   folderTitle: string
   isExporting?: boolean
@@ -72,6 +72,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
         <div class="bm-content" @click="bm.url && emit('openBookmark', bm.url)">
           <span class="bm-title">{{ bm.title || bm.url }}</span>
           <span class="bm-url">{{ bm.url }}</span>
+          <span v-if="bm.folderPath" class="bm-folder">{{ bm.folderPath }}</span>
         </div>
         <span v-if="processedIds.has(bm.id)" class="badge-processed">已整理</span>
         <button class="delete-btn" title="删除" @click.stop="emit('deleteBookmark', bm.id)">✕</button>
@@ -113,6 +114,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 .bm-content { flex: 1; min-width: 0; cursor: pointer; }
 .bm-title { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #222; }
 .bm-url { display: block; font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.bm-folder { display: block; font-size: 11px; color: #6e4dc4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
 .bm-content:hover .bm-title { color: #6e4dc4; text-decoration: underline; }
 .badge-processed { flex-shrink: 0; font-size: 11px; padding: 1px 6px; background: #e6f4ea; color: #2e7d32; border-radius: 10px; }
 .delete-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: #bbb; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }

@@ -6,6 +6,9 @@ import { getSettings } from '../storage/settings'
 import { getAllBookmarkRecords } from '../storage/bookmarks'
 
 export type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
+export type BookmarkListItem = BookmarkNode & {
+  folderPath?: string
+}
 
 export interface FolderNode {
   id: string
@@ -18,7 +21,7 @@ export interface FolderNode {
 export function useBookmarkTree() {
   const folderTree = ref<FolderNode[]>([])
   const selectedFolderId = ref<string | null>(null)
-  const selectedBookmarks = ref<BookmarkNode[]>([])
+  const selectedBookmarks = ref<BookmarkListItem[]>([])
   const processedIds = ref<Set<string>>(new Set())
   const dragOverFolderId = ref<string | null>(null)
   const expandedIds = ref<Set<string>>(new Set())
@@ -51,10 +54,26 @@ export function useBookmarkTree() {
     }
   }
 
+  function collectBookmarks(nodes: BookmarkNode[], path: string[]): BookmarkListItem[] {
+    const bookmarks: BookmarkListItem[] = []
+    for (const node of nodes) {
+      if (node.url) {
+        bookmarks.push({
+          ...node,
+          folderPath: path.join(' / '),
+        })
+        continue
+      }
+
+      bookmarks.push(...collectBookmarks(node.children ?? [], [...path, node.title]))
+    }
+    return bookmarks
+  }
+
   async function selectFolder(folderId: string) {
     selectedFolderId.value = folderId
-    const children = await browser.bookmarks.getChildren(folderId)
-    selectedBookmarks.value = children.filter(n => !!n.url)
+    const subtree = await browser.bookmarks.getSubTree(folderId)
+    selectedBookmarks.value = collectBookmarks(subtree[0]?.children ?? [], [])
   }
 
   async function toggleExpand(folderId: string) {
