@@ -10,6 +10,8 @@ const showSecret = ref(false)
 const showAISecret = ref(false)
 const testStatus = ref<'idle' | 'testing' | 'ok' | 'fail'>('idle')
 const testError = ref('')
+const aiTestStatus = ref<'idle' | 'testing' | 'ok' | 'fail'>('idle')
+const aiTestError = ref('')
 
 const ossRegions = [
   { value: 'oss-cn-hangzhou', label: '华东1（杭州）' },
@@ -42,6 +44,11 @@ function resetTestStatus() {
   testError.value = ''
 }
 
+function resetAITestStatus() {
+  aiTestStatus.value = 'idle'
+  aiTestError.value = ''
+}
+
 function handleVaultAction() {
   if (vault.needsReauth.value) {
     return vault.reauthorize()
@@ -62,6 +69,17 @@ watch(
   ],
   () => {
     resetTestStatus()
+  },
+)
+
+watch(
+  () => [
+    settings.value.aiConfig.baseUrl,
+    settings.value.aiConfig.apiKey,
+    settings.value.aiConfig.model,
+  ],
+  () => {
+    resetAITestStatus()
   },
 )
 
@@ -97,6 +115,32 @@ async function testConnection() {
   } catch (error) {
     testStatus.value = 'fail'
     testError.value = error instanceof Error ? error.message : String(error)
+  }
+}
+
+async function testAIModel() {
+  const config = settings.value.aiConfig
+  if (!config.baseUrl.trim() || !config.apiKey.trim() || !config.model.trim()) {
+    aiTestStatus.value = 'fail'
+    aiTestError.value = '请先填写完整的 AI 配置信息'
+    return
+  }
+
+  aiTestStatus.value = 'testing'
+  aiTestError.value = ''
+
+  try {
+    const { createAIProvider } = await import('../../src/ai')
+    const provider = createAIProvider({
+      baseUrl: config.baseUrl.trim(),
+      apiKey: config.apiKey.trim(),
+      model: config.model.trim(),
+    })
+    await provider.testConnection()
+    aiTestStatus.value = 'ok'
+  } catch (error) {
+    aiTestStatus.value = 'fail'
+    aiTestError.value = error instanceof Error ? error.message : String(error)
   }
 }
 </script>
@@ -254,6 +298,14 @@ async function testConnection() {
           class="input"
           placeholder="qwen-long"
         />
+      </div>
+
+      <div class="field test-row">
+        <button class="btn-secondary" type="button" :disabled="aiTestStatus === 'testing'" @click="testAIModel">
+          {{ aiTestStatus === 'testing' ? '测试中…' : '测试模型' }}
+        </button>
+        <span v-if="aiTestStatus === 'ok'" class="test-ok">✓ 模型可用</span>
+        <span v-else-if="aiTestStatus === 'fail'" class="test-fail">✗ {{ aiTestError }}</span>
       </div>
     </section>
 

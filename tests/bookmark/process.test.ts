@@ -46,6 +46,7 @@ describe('processBookmark', () => {
       async complete() {
         return JSON.stringify({ summary: 'AI摘要', tags: ['工具'], category: '技术工具' })
       },
+      async testConnection() {},
     }
     const result = await processBookmark('Test', 'https://test.com', 'content', mockProvider)
     expect(result.summary).toBe('AI摘要')

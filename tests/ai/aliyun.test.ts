@@ -28,4 +28,29 @@ describe('OpenAICompatibleProvider', () => {
     })
     await expect(provider.complete('prompt')).rejects.toThrow('AI API error: 401')
   })
+
+  it('tests model availability with a lightweight chat completion', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: 'OK' } }] }),
+    })
+    global.fetch = fetchMock
+
+    const provider = new OpenAICompatibleProvider({
+      baseUrl: 'https://api.example.com/v1/',
+      apiKey: 'test-key',
+      model: 'test-model',
+    })
+
+    await provider.testConnection()
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.com/v1/chat/completions', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'test-model',
+        messages: [{ role: 'user', content: 'Reply with OK.' }],
+        max_tokens: 8,
+      }),
+    }))
+  })
 })
