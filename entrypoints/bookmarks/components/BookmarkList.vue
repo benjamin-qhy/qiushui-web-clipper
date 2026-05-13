@@ -5,11 +5,14 @@ const props = defineProps<{
   bookmarks: BookmarkNode[]
   processedIds: Set<string>
   folderTitle: string
+  isExporting?: boolean
 }>()
 
 const emit = defineEmits<{
   deleteBookmark: [id: string]
   openBookmark: [url: string]
+  exportMarkdown: []
+  exportObsidian: []
 }>()
 
 function getDomain(url: string): string {
@@ -37,6 +40,14 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
     <div class="list-header">
       <h2 class="folder-title">{{ folderTitle || '请选择文件夹' }}</h2>
       <span class="count" v-if="bookmarks.length > 0">{{ bookmarks.length }} 条</span>
+      <div class="export-actions">
+        <button class="export-btn" :disabled="props.isExporting" @click="emit('exportMarkdown')">
+          {{ props.isExporting ? '导出中...' : '导出书签栏 MD' }}
+        </button>
+        <button class="export-btn" :disabled="props.isExporting" @click="emit('exportObsidian')">
+          导出到 Obsidian
+        </button>
+      </div>
     </div>
 
     <div v-if="!folderTitle" class="empty-hint">← 点击左侧文件夹查看书签</div>
@@ -74,6 +85,18 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 .list-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
 .folder-title { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
 .count { font-size: 12px; color: #888; }
+.export-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.export-btn {
+  border: 1px solid #d7d0ea;
+  background: #fff;
+  color: #5f3db5;
+  border-radius: 4px;
+  padding: 5px 9px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.export-btn:hover:not(:disabled) { background: #f6f2ff; border-color: #bca9ef; }
+.export-btn:disabled { cursor: not-allowed; color: #aaa; border-color: #ddd; background: #f7f7f7; }
 .empty-hint { padding: 32px 16px; color: #aaa; font-size: 14px; text-align: center; }
 .bookmark-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 8px 0; }
 .bookmark-item {
