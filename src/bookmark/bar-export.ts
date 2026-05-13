@@ -25,10 +25,16 @@ function escapeMarkdownLinkText(text: string): string {
     .trim()
 }
 
+function formatMarkdownLinkDestination(url: string): string {
+  if (!/[\s()<>]/.test(url)) return url
+  const safeUrl = url.replace(/</g, '%3C').replace(/>/g, '%3E')
+  return `<${safeUrl}>`
+}
+
 function renderBookmark(node: BookmarkNode): string {
   const url = node.url ?? ''
   const title = escapeMarkdownLinkText(node.title || url)
-  return `- [${title}](${url})`
+  return `- [${title}](${formatMarkdownLinkDestination(url)})`
 }
 
 function renderNodes(nodes: BookmarkNode[], headingLevel: number): string[] {
@@ -75,15 +81,33 @@ export function sanitizeMarkdownFilename(title: string): string {
   return `${basename}.md`
 }
 
+function deduplicateFilename(filename: string, used: Set<string>): string {
+  if (!used.has(filename)) {
+    used.add(filename)
+    return filename
+  }
+
+  const extension = filename.endsWith('.md') ? '.md' : ''
+  const basename = extension ? filename.slice(0, -extension.length) : filename
+  let index = 2
+  while (used.has(`${basename} ${index}${extension}`)) {
+    index += 1
+  }
+  const uniqueFilename = `${basename} ${index}${extension}`
+  used.add(uniqueFilename)
+  return uniqueFilename
+}
+
 export function splitBookmarksBarForObsidian(
   bookmarksBar: BookmarkNode,
   date: string,
 ): ObsidianBookmarkExportFile[] {
   const files: ObsidianBookmarkExportFile[] = []
+  const usedFilenames = new Set<string>()
   const rootBookmarks = childrenOf(bookmarksBar).filter(node => !!node.url)
   if (rootBookmarks.length > 0) {
     files.push({
-      filename: '书签栏.md',
+      filename: deduplicateFilename('书签栏.md', usedFilenames),
       content: [
         '# 书签栏',
         '',
@@ -97,7 +121,7 @@ export function splitBookmarksBarForObsidian(
   for (const node of childrenOf(bookmarksBar)) {
     if (!isFolder(node)) continue
     files.push({
-      filename: sanitizeMarkdownFilename(node.title),
+      filename: deduplicateFilename(sanitizeMarkdownFilename(node.title), usedFilenames),
       content: [
         `# ${node.title.trim() || '未命名文件夹'}`,
         '',
@@ -119,7 +143,12 @@ export async function exportBookmarksBarToObsidian(
   for (const file of files) {
     const fileHandle = await dirHandle.getFileHandle(file.filename, { create: true })
     const writable = await fileHandle.createWritable()
-    await writable.write(file.content)
-    await writable.close()
+    try {
+      await writable.write(file.content)
+      await writable.close()
+    } catch (e) {
+      await writable.abort().catch(() => {})
+      throw e
+    }
   }
 }

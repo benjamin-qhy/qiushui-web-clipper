@@ -7,47 +7,54 @@ import {
 } from '../../src/bookmark/bar-export'
 import type { BookmarkNode } from '../../src/composables/useBookmarkTree'
 
-const bookmarksBar: BookmarkNode = {
-  id: '1',
-  title: '书签栏',
-  children: [
-    { id: '10', parentId: '1', title: 'Root Link', url: 'https://root.example' },
-    {
-      id: '20',
-      parentId: '1',
-      title: '技术/工具',
-      children: [
-        { id: '21', parentId: '20', title: 'Vue [Docs]', url: 'https://vuejs.org' },
-        {
-          id: '22',
-          parentId: '20',
-          title: '子目录',
-          children: [
-            { id: '23', parentId: '22', title: '', url: 'https://empty-title.example' },
-          ],
-        },
-      ],
-    },
-    {
-      id: '30',
-      parentId: '1',
-      title: '资料',
-      children: [
-        { id: '31', parentId: '30', title: 'MDN', url: 'https://developer.mozilla.org' },
-      ],
-    },
-  ],
+function bookmark(id: string, parentId: string, title: string, url: string): BookmarkNode {
+  return { id, parentId, title, url, syncing: false }
 }
+
+function folder(id: string, title: string, children: BookmarkNode[], parentId?: string): BookmarkNode {
+  return { id, parentId, title, children, syncing: false }
+}
+
+const bookmarksBar: BookmarkNode = folder('1', '书签栏', [
+  bookmark('10', '1', 'Root Link', 'https://root.example'),
+  folder('20', '技术/工具', [
+    bookmark('21', '20', 'Vue [Docs]', 'https://vuejs.org'),
+    folder('22', '子目录', [
+      bookmark('23', '22', '', 'https://empty-title.example'),
+    ], '20'),
+  ], '1'),
+  folder('30', '资料', [
+    bookmark('31', '30', 'MDN', 'https://developer.mozilla.org'),
+  ], '1'),
+], undefined)
+
+const bookmarksBarWithCollisions: BookmarkNode = folder('1', '书签栏', [
+  bookmark('10', '1', 'Root Link', 'https://root.example'),
+  folder('20', 'A/B', [
+    bookmark('21', '20', 'A slash B', 'https://slash.example'),
+  ], '1'),
+  folder('30', 'A:B', [
+    bookmark('31', '30', 'A colon B', 'https://colon.example'),
+  ], '1'),
+  folder('40', '书签栏', [
+    bookmark('41', '40', 'Folder named bookmarks bar', 'https://bar-folder.example'),
+  ], '1'),
+], undefined)
+
+const bookmarksBarWithSpecialUrl: BookmarkNode = folder('1', '书签栏', [
+  bookmark('10', '1', 'Paren URL', 'https://example.com/a_(b)'),
+  bookmark('11', '1', 'Spaced URL', 'https://example.com/a b'),
+], undefined)
 
 describe('findBookmarksBarNode', () => {
   it('finds the chrome bookmark bar by id', () => {
-    const root: BookmarkNode = { id: '0', title: '', children: [bookmarksBar] }
+    const root = folder('0', '', [bookmarksBar])
     expect(findBookmarksBarNode([root])?.id).toBe('1')
   })
 
   it('falls back to localized bookmark bar titles', () => {
     const localized: BookmarkNode = { ...bookmarksBar, id: 'toolbar_____', title: 'Bookmarks Bar' }
-    const root: BookmarkNode = { id: '0', title: '', children: [localized] }
+    const root = folder('0', '', [localized])
     expect(findBookmarksBarNode([root])?.id).toBe('toolbar_____')
   })
 })
@@ -63,6 +70,12 @@ describe('buildBookmarksBarMarkdown', () => {
     expect(markdown).toContain('### 子目录')
     expect(markdown).toContain('- [https://empty-title.example](https://empty-title.example)')
   })
+
+  it('wraps link destinations so URLs with spaces or closing parentheses render correctly', () => {
+    const markdown = buildBookmarksBarMarkdown(bookmarksBarWithSpecialUrl, '2026-05-13')
+    expect(markdown).toContain('- [Paren URL](<https://example.com/a_(b)>)')
+    expect(markdown).toContain('- [Spaced URL](<https://example.com/a b>)')
+  })
 })
 
 describe('splitBookmarksBarForObsidian', () => {
@@ -73,6 +86,14 @@ describe('splitBookmarksBarForObsidian', () => {
     expect(files[1].content).toContain('# 技术/工具')
     expect(files[1].content).toContain('## 子目录')
     expect(files[2].content).toContain('- [MDN](https://developer.mozilla.org)')
+  })
+
+  it('keeps generated obsidian filenames unique after sanitizing', () => {
+    const files = splitBookmarksBarForObsidian(bookmarksBarWithCollisions, '2026-05-13')
+    expect(files.map(f => f.filename)).toEqual(['书签栏.md', 'A_B.md', 'A_B 2.md', '书签栏 2.md'])
+    expect(files.find(f => f.filename === 'A_B.md')?.content).toContain('https://slash.example')
+    expect(files.find(f => f.filename === 'A_B 2.md')?.content).toContain('https://colon.example')
+    expect(files.find(f => f.filename === '书签栏 2.md')?.content).toContain('https://bar-folder.example')
   })
 })
 
