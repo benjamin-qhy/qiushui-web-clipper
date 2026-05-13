@@ -6,6 +6,7 @@ import {
   buildBookmarksBarMarkdown,
   exportBookmarksBarToObsidian,
   findBookmarksBarNode,
+  formatLocalDate,
   splitBookmarksBarForObsidian,
 } from '../../src/bookmark/bar-export'
 import { useVaultStore } from '../../src/composables/useVaultStore'
@@ -50,7 +51,7 @@ function handleOpenBookmark(url: string) {
 }
 
 function todayString(): string {
-  return new Date().toISOString().slice(0, 10)
+  return formatLocalDate()
 }
 
 function setSuccess(message: string) {

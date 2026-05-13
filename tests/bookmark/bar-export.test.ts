@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildBookmarksBarMarkdown,
+  exportBookmarksBarToObsidian,
   findBookmarksBarNode,
+  formatLocalDate,
   sanitizeMarkdownFilename,
   splitBookmarksBarForObsidian,
 } from '../../src/bookmark/bar-export'
@@ -46,6 +48,69 @@ const bookmarksBarWithSpecialUrl: BookmarkNode = folder('1', '书签栏', [
   bookmark('11', '1', 'Spaced URL', 'https://example.com/a b'),
 ], undefined)
 
+const bookmarksBarWithMessyFolderTitle: BookmarkNode = folder('1', '书签栏', [
+  folder('20', '技术\n工具 [前端]', [
+    bookmark('21', '20', 'Vue', 'https://vuejs.org'),
+  ], '1'),
+], undefined)
+
+class FakeFile {
+  constructor(private readonly read: () => string) {}
+
+  async text() {
+    return this.read()
+  }
+}
+
+class FakeWritable {
+  constructor(private readonly writeFile: (content: string) => void) {}
+
+  async write(content: string) {
+    this.writeFile(content)
+  }
+
+  async close() {}
+
+  async abort() {}
+}
+
+class FakeFileHandle {
+  constructor(private readonly read: () => string, private readonly writeFile: (content: string) => void) {}
+
+  async getFile() {
+    return new FakeFile(this.read)
+  }
+
+  async createWritable() {
+    return new FakeWritable(this.writeFile)
+  }
+}
+
+class FakeDirectoryHandle {
+  files = new Map<string, string>()
+  deleted: string[] = []
+
+  async getDirectoryHandle() {
+    return this
+  }
+
+  async getFileHandle(name: string, options?: { create?: boolean }) {
+    if (!this.files.has(name) && !options?.create) {
+      throw new Error(`Missing file ${name}`)
+    }
+    if (!this.files.has(name)) this.files.set(name, '')
+    return new FakeFileHandle(
+      () => this.files.get(name) ?? '',
+      content => { this.files.set(name, content) },
+    )
+  }
+
+  async removeEntry(name: string) {
+    this.deleted.push(name)
+    this.files.delete(name)
+  }
+}
+
 describe('findBookmarksBarNode', () => {
   it('finds the chrome bookmark bar by id', () => {
     const root = folder('0', '', [bookmarksBar])
@@ -76,6 +141,12 @@ describe('buildBookmarksBarMarkdown', () => {
     expect(markdown).toContain('- [Paren URL](<https://example.com/a_(b)>)')
     expect(markdown).toContain('- [Spaced URL](<https://example.com/a b>)')
   })
+
+  it('cleans folder titles before rendering markdown headings', () => {
+    const markdown = buildBookmarksBarMarkdown(bookmarksBarWithMessyFolderTitle, '2026-05-13')
+    expect(markdown).toContain('## 技术 工具 \\[前端\\]')
+    expect(markdown).not.toContain('## 技术\n工具')
+  })
 })
 
 describe('splitBookmarksBarForObsidian', () => {
@@ -95,10 +166,43 @@ describe('splitBookmarksBarForObsidian', () => {
     expect(files.find(f => f.filename === 'A_B 2.md')?.content).toContain('https://colon.example')
     expect(files.find(f => f.filename === '书签栏 2.md')?.content).toContain('https://bar-folder.example')
   })
+
+  it('cleans top-level folder titles inside split obsidian files', () => {
+    const files = splitBookmarksBarForObsidian(bookmarksBarWithMessyFolderTitle, '2026-05-13')
+    expect(files[0].content).toContain('# 技术 工具 \\[前端\\]')
+    expect(files[0].content).not.toContain('# 技术\n工具')
+  })
 })
 
 describe('sanitizeMarkdownFilename', () => {
   it('removes characters unsafe for filenames', () => {
     expect(sanitizeMarkdownFilename('技术/工具:前端*资料')).toBe('技术_工具_前端_资料.md')
+  })
+})
+
+describe('formatLocalDate', () => {
+  it('formats the local calendar date rather than the UTC date', () => {
+    expect(formatLocalDate(new Date(2026, 4, 13, 0, 30))).toBe('2026-05-13')
+  })
+})
+
+describe('exportBookmarksBarToObsidian', () => {
+  it('removes files from the previous export manifest that are absent from the current export', async () => {
+    const dir = new FakeDirectoryHandle()
+    dir.files.set('.bookmarks-bar-export.json', JSON.stringify({ files: ['资料.md', '技术.md'] }))
+    dir.files.set('资料.md', 'stale')
+    dir.files.set('技术.md', 'old')
+    dir.files.set('用户笔记.md', 'manual note')
+
+    await exportBookmarksBarToObsidian(
+      dir as unknown as FileSystemDirectoryHandle,
+      'Bookmarks',
+      [{ filename: '技术.md', content: '# 技术\n' }],
+    )
+
+    expect(dir.deleted).toEqual(['资料.md'])
+    expect(dir.files.get('技术.md')).toBe('# 技术\n')
+    expect(dir.files.get('用户笔记.md')).toBe('manual note')
+    expect(JSON.parse(dir.files.get('.bookmarks-bar-export.json') ?? '{}')).toEqual({ files: ['技术.md'] })
   })
 })
