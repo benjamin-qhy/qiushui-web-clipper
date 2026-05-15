@@ -114,13 +114,12 @@ function handleToggleThinking(msgId: string) {
 .sidebar {
   position: relative;
   flex-shrink: 0;
-  border-left: 1px solid #e0e0e0;
+  border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #fafafa;
+  background: var(--color-surface);
 }
-
 .drag-handle {
   position: absolute;
   left: 0;
@@ -130,42 +129,32 @@ function handleToggleThinking(msgId: string) {
   cursor: col-resize;
   z-index: 10;
 }
-
-.drag-handle:hover {
-  background: #b39ddb;
-}
-
+.drag-handle:hover { background: var(--color-border); }
 .sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  background: var(--color-bg);
 }
-
 .sidebar-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
 }
-
-.header-actions {
-  display: flex;
-  gap: 6px;
-}
-
+.header-actions { display: flex; gap: 6px; }
 .btn-icon {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
-  color: #888;
-  padding: 0 2px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  padding: 0 3px;
   line-height: 1;
 }
-
-.btn-icon:hover {
-  color: #444;
-}
+.btn-icon:hover { color: var(--color-accent); }
 </style>
