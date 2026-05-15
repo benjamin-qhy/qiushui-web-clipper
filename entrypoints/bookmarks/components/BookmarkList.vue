@@ -71,27 +71,90 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 
 <style scoped>
 .list-panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.list-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
-.folder-title { margin: 0; font-size: 15px; font-weight: 600; flex: 1; }
-.count { font-size: 12px; color: #888; }
-.empty-hint { padding: 32px 16px; color: #aaa; font-size: 14px; text-align: center; }
-.bookmark-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 8px 0; }
-.bookmark-item {
+.list-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  cursor: grab;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
-.bookmark-item:hover { background: #f9f9f9; }
+.folder-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  flex: 1;
+  color: var(--color-text);
+}
+.count {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.empty-hint {
+  padding: 48px 18px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.bookmark-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  cursor: grab;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.bookmark-item:hover { background: var(--color-surface); }
 .bookmark-item:active { cursor: grabbing; }
-.favicon { flex-shrink: 0; border-radius: 2px; }
+.favicon { flex-shrink: 0; border-radius: 2px; opacity: 0.85; }
 .bm-content { flex: 1; min-width: 0; cursor: pointer; }
-.bm-title { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #222; }
-.bm-url { display: block; font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
-.bm-content:hover .bm-title { color: #6e4dc4; text-decoration: underline; }
-.badge-processed { flex-shrink: 0; font-size: 11px; padding: 1px 6px; background: #e6f4ea; color: #2e7d32; border-radius: 10px; }
-.delete-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: #bbb; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; }
+.bm-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+.bm-url {
+  display: block;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+.bm-content:hover .bm-title { color: var(--color-accent); }
+.badge-processed {
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 1px 6px;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  border-radius: 2px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 2px 6px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
 .delete-btn:hover { background: #fce8e6; color: #c62828; }
 </style>
