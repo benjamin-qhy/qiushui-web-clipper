@@ -29,7 +29,7 @@ defineEmits<{
   padding: 24px;
 }
 .hint {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.8px;
@@ -42,7 +42,7 @@ defineEmits<{
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 2px;
-  font-size: 12px;
+  font-size: 14px;
   font-family: var(--font-ui);
   color: var(--color-text);
   cursor: pointer;

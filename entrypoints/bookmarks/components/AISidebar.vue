@@ -1,19 +1,12 @@
 <!-- entrypoints/bookmarks/components/AISidebar.vue -->
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import { browser } from 'wxt/browser'
-import { useAIChat } from '../../../src/composables/useAIChat'
 import { useBookmarkProcess } from '../../../src/composables/useBookmarkProcess'
-import { useBookmarkReorganize } from '../../../src/composables/useBookmarkReorganize'
-import ChatMessages from './ai/ChatMessages.vue'
-import ChatInput from './ai/ChatInput.vue'
-import EmptyState from './ai/EmptyState.vue'
 
-const chat = useAIChat()
 const processor = useBookmarkProcess()
-const reorganizer = useBookmarkReorganize()
 
-const sidebarWidth = ref(360)
+const sidebarWidth = ref(320)
 let dragStartX = 0
 let dragStartWidth = 0
 
@@ -28,7 +21,7 @@ function onDragStart(e: MouseEvent) {
 
 function onDragMove(e: MouseEvent) {
   const delta = dragStartX - e.clientX
-  sidebarWidth.value = Math.min(600, Math.max(260, dragStartWidth + delta))
+  sidebarWidth.value = Math.min(600, Math.max(240, dragStartWidth + delta))
 }
 
 function onDragEnd() {
@@ -43,41 +36,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('mouseup', onDragEnd)
 })
 
-const hasMessages = computed(() => chat.messages.value.length > 0)
-const isDisabled = computed(() => chat.isLoading.value)
-
 function openSettings() {
-  browser.runtime.openOptionsPage()
-}
-
-function handleSend(text: string) {
-  if (reorganizer.state.value === 'awaiting_confirm') {
-    reorganizer.submitModification(chat, text)
-  } else {
-    chat.addUserMessage(text)
-    chat.appendAIMessage({ type: 'text', content: '请使用上方快捷命令开始整理。' })
-  }
-}
-
-function handleStartProcess() {
-  processor.start(chat)
-}
-
-function handleStartReorganize() {
-  reorganizer.start(chat)
-}
-
-function handleConfirmProposal(_msgId: string, keepOldFolders: boolean) {
-  reorganizer.confirm(chat, keepOldFolders)
-}
-
-function handleModifyProposal(_msgId: string) {
-  // The input stays active so the user can describe the requested adjustment.
-}
-
-function handleToggleThinking(msgId: string) {
-  const msg = chat.messages.value.find(m => m.id === msgId)
-  if (msg) chat.updateMessage(msgId, { thinkingCollapsed: !msg.thinkingCollapsed })
+  browser.tabs.create({ url: '/options.html' })
 }
 </script>
 
@@ -87,26 +47,58 @@ function handleToggleThinking(msgId: string) {
 
     <div class="sidebar-header">
       <span class="sidebar-title">AI 整理</span>
-      <div class="header-actions">
-        <button class="btn-icon" title="新建会话" @click="chat.newConversation()">✦</button>
-        <button class="btn-icon" title="AI 设置" @click="openSettings">⚙</button>
-      </div>
+      <button class="btn-icon" title="设置" @click="openSettings">⚙</button>
     </div>
 
-    <EmptyState
-      v-if="!hasMessages"
-      @start-process="handleStartProcess"
-      @start-reorganize="handleStartReorganize"
-    />
-    <ChatMessages
-      v-else
-      :messages="chat.messages.value"
-      @confirm-proposal="handleConfirmProposal"
-      @modify-proposal="handleModifyProposal"
-      @toggle-thinking="handleToggleThinking"
-    />
+    <!-- Action -->
+    <div class="action-area">
+      <button
+        class="btn-process"
+        :disabled="processor.state.value === 'processing'"
+        @click="processor.start()"
+      >
+        <span v-if="processor.state.value === 'processing'">
+          整理中… {{ processor.progress.value.done }}/{{ processor.progress.value.total }}
+        </span>
+        <span v-else>▶ 整理「待整理」文件夹</span>
+      </button>
+    </div>
 
-    <ChatInput :disabled="isDisabled" @send="handleSend" />
+    <!-- Log -->
+    <div class="log-area">
+      <div v-if="processor.log.value.length === 0" class="log-empty">
+        <span v-if="processor.state.value === 'idle'">点击上方按钮开始整理</span>
+        <span v-else-if="processor.state.value === 'processing'">正在处理…</span>
+      </div>
+
+      <div
+        v-for="(entry, i) in processor.log.value"
+        :key="i"
+        class="log-entry"
+        :class="entry.status"
+      >
+        <span class="log-time">{{ entry.time }}</span>
+        <span class="log-body">
+          <template v-if="entry.status === 'ok'">
+            <a class="log-title" :href="entry.url" target="_blank" :title="entry.url">{{ entry.title }}</a>
+            <span class="log-arrow">→</span>
+            <span class="log-category">{{ entry.category }}</span>
+          </template>
+          <template v-else>
+            <span class="log-title error-title">{{ entry.title }}</span>
+            <span class="log-error">{{ entry.error }}</span>
+          </template>
+        </span>
+      </div>
+
+      <div v-if="processor.state.value === 'done' && processor.log.value.length > 0" class="log-summary">
+        完成：共 {{ processor.progress.value.total }} 条，
+        成功 {{ processor.log.value.filter(e => e.status === 'ok').length }} 条
+        <template v-if="processor.log.value.filter(e => e.status === 'error').length > 0">
+          ，失败 {{ processor.log.value.filter(e => e.status === 'error').length }} 条
+        </template>
+      </div>
+    </div>
   </aside>
 </template>
 
@@ -130,6 +122,8 @@ function handleToggleThinking(msgId: string) {
   z-index: 10;
 }
 .drag-handle:hover { background: var(--color-border); }
+
+/* Header */
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -140,13 +134,11 @@ function handleToggleThinking(msgId: string) {
   background: var(--color-bg);
 }
 .sidebar-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
 }
-.header-actions { display: flex; gap: 6px; }
 .btn-icon {
   background: none;
   border: none;
@@ -157,4 +149,97 @@ function handleToggleThinking(msgId: string) {
   line-height: 1;
 }
 .btn-icon:hover { color: var(--color-accent); }
+
+/* Action */
+.action-area {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+.btn-process {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--color-dark);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+.btn-process:hover { opacity: 0.85; }
+.btn-process:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Log */
+.log-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0 16px;
+}
+.log-empty {
+  padding: 32px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.log-entry {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.log-entry:last-of-type { border-bottom: none; }
+.log-time {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+}
+.log-body {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.log-title {
+  color: var(--color-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+  flex-shrink: 0;
+}
+a.log-title {
+  text-decoration: none;
+}
+a.log-title:hover { color: var(--color-accent); text-decoration: underline; }
+.error-title { color: var(--color-text-secondary); }
+.log-arrow {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+.log-category {
+  color: var(--color-accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.log-error {
+  color: #c62828;
+  font-size: 14px;
+  word-break: break-word;
+}
+.log-summary {
+  padding: 10px 16px 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
 </style>

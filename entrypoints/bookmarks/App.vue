@@ -43,7 +43,7 @@ function setError(e: unknown) {
     <div class="pane-left">
       <div class="pane-header">
         <div class="pane-brand">Qiushui</div>
-        <div class="pane-title">Bookmarks</div>
+        <div class="pane-title">书签</div>
       </div>
       <div class="pane-body">
         <FolderTree
@@ -106,7 +106,7 @@ body { margin: 0; font-family: var(--font-ui); background: var(--color-base); }
   flex-shrink: 0;
 }
 .pane-brand {
-  font-size: 7px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-accent);
   text-transform: uppercase;
@@ -139,7 +139,7 @@ body { margin: 0; font-family: var(--font-ui); background: var(--color-base); }
   color: #c62828;
   padding: 8px 16px;
   border-radius: 2px;
-  font-size: 12px;
+  font-size: 14px;
   border: 1px solid #f5c6c6;
   z-index: 100;
 }

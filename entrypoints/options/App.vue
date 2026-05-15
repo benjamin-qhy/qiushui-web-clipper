@@ -25,7 +25,7 @@ const ossRegions = [
 const version = '2.0.0'
 const mainEl = ref<HTMLElement | null>(null)
 const activeSection = ref('vault')
-const sectionIds = ['vault', 'images', 'ai', 'org', 'inbox']
+const sectionIds = ['vault', 'images', 'ai', 'org']
 
 let observer: IntersectionObserver | null = null
 
@@ -190,16 +190,15 @@ async function testAIModel() {
     <nav class="settings-nav">
       <div class="nav-header">
         <div class="nav-brand">Qiushui Clipper</div>
-        <div class="nav-title">Settings</div>
+        <div class="nav-title">设置</div>
       </div>
       <div class="nav-body">
-        <div class="nav-group-label">General</div>
-        <a class="nav-item" :class="{ active: activeSection === 'vault' }" href="#section-vault" @click.prevent="scrollTo('vault')">Vault</a>
-        <a class="nav-item" :class="{ active: activeSection === 'images' }" href="#section-images" @click.prevent="scrollTo('images')">Images</a>
-        <a class="nav-item" :class="{ active: activeSection === 'ai' }" href="#section-ai" @click.prevent="scrollTo('ai')">AI Model</a>
-        <div class="nav-group-label">Bookmarks</div>
-        <a class="nav-item" :class="{ active: activeSection === 'org' }" href="#section-org" @click.prevent="scrollTo('org')">Organization</a>
-        <a class="nav-item" :class="{ active: activeSection === 'inbox' }" href="#section-inbox" @click.prevent="scrollTo('inbox')">Inbox</a>
+        <div class="nav-group-label">通用</div>
+        <a class="nav-item" :class="{ active: activeSection === 'vault' }" href="#section-vault" @click.prevent="scrollTo('vault')">笔记库</a>
+        <a class="nav-item" :class="{ active: activeSection === 'images' }" href="#section-images" @click.prevent="scrollTo('images')">图片</a>
+        <a class="nav-item" :class="{ active: activeSection === 'ai' }" href="#section-ai" @click.prevent="scrollTo('ai')">AI 模型</a>
+        <div class="nav-group-label">书签</div>
+        <a class="nav-item" :class="{ active: activeSection === 'org' }" href="#section-org" @click.prevent="scrollTo('org')">整理</a>
       </div>
       <div class="nav-footer">v{{ version }}</div>
     </nav>
@@ -210,27 +209,27 @@ async function testAIModel() {
       <div class="main-topbar">
         <div></div>
         <button class="btn-save" type="button" :disabled="isSaving" @click="save">
-          {{ isSaving ? 'Saving…' : 'Save Settings' }}
+          {{ isSaving ? '保存中…' : '保存设置' }}
         </button>
       </div>
 
       <!-- Vault -->
       <section id="section-vault" class="settings-section">
         <div class="section-header">
-          <h2 class="section-title">Vault</h2>
+          <h2 class="section-title">笔记库</h2>
           <p class="section-desc">Obsidian 笔记库配置</p>
         </div>
         <div class="field">
-          <label class="field-label">Vault Path</label>
+          <label class="field-label">笔记库路径</label>
           <div class="vault-row">
             <span class="vault-name">{{ vaultName ?? '未选择' }}</span>
             <button class="btn-secondary" type="button" @click="handleVaultAction">{{ vaultButtonLabel }}</button>
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="sub-dir">Sub Directory</label>
+          <label class="field-label" for="sub-dir">子目录</label>
           <input id="sub-dir" v-model="settings.subDir" class="field-input" placeholder="Clippings" />
-          <p class="field-hint">笔记会保存到 Vault 下的此子目录，留空则保存到根目录。</p>
+          <p class="field-hint">笔记会保存到笔记库下的此子目录，留空则保存到根目录。</p>
         </div>
       </section>
 
@@ -239,26 +238,26 @@ async function testAIModel() {
       <!-- Images -->
       <section id="section-images" class="settings-section">
         <div class="section-header">
-          <h2 class="section-title">Images</h2>
+          <h2 class="section-title">图片</h2>
           <p class="section-desc">图片存储方式</p>
         </div>
         <div class="field">
-          <label class="field-label">Image Mode</label>
+          <label class="field-label">图片模式</label>
           <div class="mode-group">
             <button
               class="mode-btn"
               :class="{ active: settings.imageMode === 'local' }"
               type="button"
               @click="settings.imageMode = 'local'"
-            >Local</button>
+            >本地</button>
             <button
               class="mode-btn"
               :class="{ active: settings.imageMode === 'oss' }"
               type="button"
               @click="settings.imageMode = 'oss'"
-            >Aliyun OSS</button>
+            >阿里云 OSS</button>
           </div>
-          <p class="field-hint">Local: 图片保存到 .assets 子目录</p>
+          <p class="field-hint">本地：图片保存到 .assets 子目录</p>
         </div>
 
         <template v-if="settings.imageMode === 'oss'">
@@ -274,22 +273,22 @@ async function testAIModel() {
             </div>
           </div>
           <div class="field">
-            <label class="field-label" for="oss-bucket">Bucket</label>
+            <label class="field-label" for="oss-bucket">存储桶</label>
             <input id="oss-bucket" v-model="settings.aliyunOSS.bucket" class="field-input" autocomplete="off" />
           </div>
           <div class="field">
-            <label class="field-label" for="oss-region">Region</label>
+            <label class="field-label" for="oss-region">地域</label>
             <select id="oss-region" v-model="settings.aliyunOSS.region" class="field-input field-select">
               <option v-for="region in ossRegions" :key="region.value" :value="region.value">{{ region.label }}</option>
             </select>
           </div>
           <div class="field">
-            <label class="field-label" for="oss-prefix">Path Prefix</label>
+            <label class="field-label" for="oss-prefix">路径前缀</label>
             <input id="oss-prefix" v-model="settings.aliyunOSS.prefix" class="field-input" placeholder="qiushui-web-clipper" />
             <p class="field-hint preview-path">{{ ossPathPreview }}</p>
           </div>
           <div class="field">
-            <label class="field-label" for="oss-custom-domain">Custom Domain</label>
+            <label class="field-label" for="oss-custom-domain">自定义域名</label>
             <input id="oss-custom-domain" v-model="settings.aliyunOSS.customDomain" class="field-input" placeholder="https://img.example.com" autocomplete="off" />
           </div>
           <div class="field test-row">
@@ -307,23 +306,23 @@ async function testAIModel() {
       <!-- AI Model -->
       <section id="section-ai" class="settings-section">
         <div class="section-header">
-          <h2 class="section-title">AI Model</h2>
+          <h2 class="section-title">AI 模型</h2>
           <p class="section-desc">AI 模型配置</p>
         </div>
         <div class="field">
-          <label class="field-label" for="ai-base-url">Base URL</label>
+          <label class="field-label" for="ai-base-url">接口地址</label>
           <input id="ai-base-url" v-model="settings.aiConfig.baseUrl" class="field-input" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
           <p class="field-hint">支持任意 OpenAI 兼容接口</p>
         </div>
         <div class="field">
-          <label class="field-label" for="ai-api-key">API Key</label>
+          <label class="field-label" for="ai-api-key">密钥</label>
           <div class="secret-row">
             <input id="ai-api-key" v-model="settings.aiConfig.apiKey" :type="showAISecret ? 'text' : 'password'" class="field-input" autocomplete="off" />
             <button class="btn-secondary" type="button" @click="showAISecret = !showAISecret">{{ showAISecret ? '隐藏' : '显示' }}</button>
           </div>
         </div>
         <div class="field">
-          <label class="field-label" for="ai-model">Model</label>
+          <label class="field-label" for="ai-model">模型名称</label>
           <input id="ai-model" v-model="settings.aiConfig.model" class="field-input" placeholder="qwen-long" />
         </div>
         <div class="field test-row">
@@ -340,32 +339,18 @@ async function testAIModel() {
       <!-- Organization -->
       <section id="section-org" class="settings-section">
         <div class="section-header">
-          <h2 class="section-title">Organization</h2>
+          <h2 class="section-title">整理</h2>
           <p class="section-desc">书签整理配置</p>
         </div>
         <div class="field">
-          <label class="field-label" for="bookmark-inbox">Inbox Folder</label>
+          <label class="field-label" for="bookmark-inbox">收件箱文件夹</label>
           <input id="bookmark-inbox" v-model="settings.bookmarkInboxFolder" class="field-input" placeholder="待整理" />
           <p class="field-hint">将书签收藏到该文件夹后，插件会自动整理其中的内容。</p>
         </div>
         <div class="field">
-          <label class="field-label" for="bookmark-sub-dir">Obsidian Sub Directory</label>
+          <label class="field-label" for="bookmark-sub-dir">Obsidian 子目录</label>
           <input id="bookmark-sub-dir" v-model="settings.bookmarkSubDir" class="field-input" placeholder="Bookmarks" />
-          <p class="field-hint">整理后的书签笔记将保存到 Vault 下的此子目录中。</p>
-        </div>
-      </section>
-
-      <div class="section-divider"></div>
-
-      <!-- Inbox -->
-      <section id="section-inbox" class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">Inbox</h2>
-          <p class="section-desc">自动处理设置</p>
-        </div>
-        <div class="field">
-          <label class="field-label" for="process-interval">Process Interval (hours)</label>
-          <input id="process-interval" v-model.number="settings.processInterval" class="field-input" type="number" min="1" max="168" style="max-width: 120px;" />
+          <p class="field-hint">整理后的书签笔记将保存到笔记库下的此子目录中。</p>
         </div>
       </section>
 
@@ -375,7 +360,7 @@ async function testAIModel() {
         <span v-if="saveStatus === 'saved'" class="status-ok">✓ 已保存</span>
         <span v-else-if="saveStatus === 'error'" class="status-fail">保存失败</span>
         <button class="btn-save" type="button" :disabled="isSaving" @click="save">
-          {{ isSaving ? 'Saving…' : 'Save Settings' }}
+          {{ isSaving ? '保存中…' : '保存设置' }}
         </button>
       </div>
 
@@ -408,7 +393,7 @@ async function testAIModel() {
   border-bottom: 1px solid var(--color-border);
 }
 .nav-brand {
-  font-size: 7px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-accent);
   text-transform: uppercase;
@@ -427,11 +412,11 @@ async function testAIModel() {
   overflow-y: auto;
 }
 .nav-group-label {
-  font-size: 6px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   padding: 8px 20px 6px;
   margin-top: 4px;
 }
@@ -442,7 +427,7 @@ async function testAIModel() {
   gap: 0;
   text-decoration: none;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   padding: 7px 20px;
   cursor: pointer;
   transition: color 0.1s;
@@ -457,7 +442,7 @@ async function testAIModel() {
 }
 .nav-footer {
   padding: 12px 20px;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   border-top: 1px solid var(--color-border);
 }
@@ -491,7 +476,7 @@ async function testAIModel() {
 }
 .section-desc {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-muted);
 }
 .section-divider {
@@ -503,10 +488,8 @@ async function testAIModel() {
 .field:last-child { margin-bottom: 0; }
 .field-label {
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
   color: var(--color-text-muted);
   margin-bottom: 7px;
 }
@@ -517,7 +500,7 @@ async function testAIModel() {
   border: none;
   border-bottom: 1px solid var(--color-border);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text);
   font-family: var(--font-ui);
   outline: none;
@@ -526,7 +509,7 @@ async function testAIModel() {
 .field-select { cursor: pointer; }
 .field-hint {
   margin: 6px 0 0;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   line-height: 1.5;
 }
@@ -542,7 +525,7 @@ async function testAIModel() {
 .vault-name {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -559,7 +542,7 @@ async function testAIModel() {
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
   border-radius: 2px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-ui);
@@ -576,7 +559,7 @@ async function testAIModel() {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 2px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   cursor: pointer;
   white-space: nowrap;
@@ -590,7 +573,7 @@ async function testAIModel() {
   color: #fff;
   border: none;
   border-radius: 2px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.5px;
   cursor: pointer;
@@ -598,8 +581,8 @@ async function testAIModel() {
 }
 .btn-save:hover { opacity: 0.85; }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-.status-ok { color: #2e7d32; font-size: 12px; }
-.status-fail { color: #c62828; font-size: 12px; word-break: break-word; }
+.status-ok { color: #2e7d32; font-size: 14px; }
+.status-fail { color: #c62828; font-size: 14px; word-break: break-word; }
 .bottom-save {
   display: flex;
   align-items: center;

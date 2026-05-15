@@ -22,7 +22,6 @@ export interface Settings {
   aliyunOSS: AliyunOSSConfig
   aiConfig: AIConfig
   bookmarkInboxFolder: string
-  processInterval: number
   bookmarkSubDir: string
 }
 
@@ -46,7 +45,6 @@ export const DEFAULT_SETTINGS: Settings = {
     model: 'qwen-long',
   },
   bookmarkInboxFolder: '待整理',
-  processInterval: 6,
   bookmarkSubDir: 'Bookmarks',
 }
 

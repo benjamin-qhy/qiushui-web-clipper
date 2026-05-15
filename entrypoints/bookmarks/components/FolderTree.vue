@@ -189,7 +189,7 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 14px;
   color: var(--color-text-muted);
   width: 14px;
   flex-shrink: 0;
@@ -197,7 +197,7 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
 }
 .folder-name {
   flex: 1;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -214,7 +214,7 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   padding: 1px 4px;
   border-radius: 2px;
@@ -226,7 +226,7 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
 .new-folder-row { padding-left: 30px; }
 .inline-input {
   flex: 1;
-  font-size: 12px;
+  font-size: 14px;
   border: none;
   border-bottom: 1px solid var(--color-accent);
   padding: 1px 4px;

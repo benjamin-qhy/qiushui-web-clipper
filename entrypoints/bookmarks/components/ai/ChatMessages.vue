@@ -81,7 +81,7 @@ watch(() => props.messages.length, async () => {
 .bubble {
   max-width: 85%;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
   word-break: break-word;
   border-radius: 2px;
@@ -111,11 +111,11 @@ watch(() => props.messages.length, async () => {
   cursor: pointer;
   user-select: none;
 }
-.thinking-toggle { font-size: 9px; color: var(--color-text-muted); }
-.thinking-title { font-size: 11px; color: var(--color-text-secondary); }
+.thinking-toggle { font-size: 14px; color: var(--color-text-muted); }
+.thinking-title { font-size: 14px; color: var(--color-text-secondary); }
 .thinking-lines { padding: 4px 10px 8px; display: flex; flex-direction: column; gap: 2px; }
 .thinking-line {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   display: flex;
   gap: 6px;

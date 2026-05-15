@@ -12,8 +12,6 @@ export interface ProcessingStatus {
   state: 'idle' | 'running' | 'done' | 'error'
   total: number
   processed: number
-  duplicatesRemoved: number
-  deadLinksRemoved: number
   lastRunAt: number | null
   error?: string
 }

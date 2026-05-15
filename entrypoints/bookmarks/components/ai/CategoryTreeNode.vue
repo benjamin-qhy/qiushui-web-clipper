@@ -26,5 +26,5 @@ defineProps<{
 <style scoped>
 .tree-node { padding: 2px 0; }
 .node-label { display: flex; align-items: center; gap: 4px; color: var(--color-text); }
-.icon { font-size: 12px; }
+.icon { font-size: 14px; }
 </style>

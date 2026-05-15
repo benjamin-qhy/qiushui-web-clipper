@@ -1,7 +1,6 @@
 import { browser } from 'wxt/browser'
 import { getSettings } from '../src/storage/settings'
 import { saveBookmarkRecord, type ProcessingStatus } from '../src/storage/bookmarks'
-import { deduplicateByUrl, isDeadLink } from '../src/bookmark/duplicates'
 import { processBookmark } from '../src/bookmark/process'
 import { createAIProvider } from '../src/ai/index'
 import type { Browser } from 'wxt/browser'
@@ -12,8 +11,6 @@ let processingStatus: ProcessingStatus = {
   state: 'idle',
   total: 0,
   processed: 0,
-  duplicatesRemoved: 0,
-  deadLinksRemoved: 0,
   lastRunAt: null,
 }
 
@@ -38,8 +35,6 @@ async function triggerProcessing(): Promise<void> {
     state: 'running',
     total: 0,
     processed: 0,
-    duplicatesRemoved: 0,
-    deadLinksRemoved: 0,
     lastRunAt: null,
   }
 
@@ -49,12 +44,7 @@ async function triggerProcessing(): Promise<void> {
 
     const searchResults = await browser.bookmarks.search({ title: inboxFolderName })
     const inboxFolder = searchResults.find((r: BookmarkTreeNode) => !r.url)
-    if (!inboxFolder) {
-      processingStatus = { ...processingStatus, state: 'done', lastRunAt: Date.now() }
-      return
-    }
-
-    if (!inboxFolder.parentId) {
+    if (!inboxFolder || !inboxFolder.parentId) {
       processingStatus = { ...processingStatus, state: 'done', lastRunAt: Date.now() }
       return
     }
@@ -67,24 +57,11 @@ async function triggerProcessing(): Promise<void> {
 
     processingStatus.total = bookmarks.length
 
-    const { keep, remove } = deduplicateByUrl(bookmarks)
-    for (const bm of remove) {
-      await browser.bookmarks.remove(bm.id)
-      processingStatus.duplicatesRemoved++
-    }
-
     const aiProvider = createAIProvider(settings.aiConfig)
 
-    for (const bm of keep) {
+    for (const bm of bookmarks) {
       if (!bm.url) continue
       try {
-        const dead = await isDeadLink(bm.url)
-        if (dead) {
-          await browser.bookmarks.remove(bm.id)
-          processingStatus.deadLinksRemoved++
-          continue
-        }
-
         const pageText = await fetchPageText(bm.url)
         const result = await processBookmark(bm.title || '', bm.url, pageText, aiProvider)
 
@@ -142,25 +119,6 @@ async function handleMessage(msg: { type: string; url?: string }): Promise<unkno
 
 export default defineBackground({
   main() {
-    browser.runtime.onInstalled.addListener(async () => {
-      const settings = await getSettings()
-      const periodInMinutes = settings.processInterval * 60
-      await browser.alarms.create('process-bookmarks', { periodInMinutes })
-    })
-
-    browser.runtime.onStartup.addListener(async () => {
-      const settings = await getSettings()
-      const periodInMinutes = settings.processInterval * 60
-      await browser.alarms.create('process-bookmarks', { periodInMinutes })
-      triggerProcessing()
-    })
-
-    browser.alarms.onAlarm.addListener((alarm: Browser.alarms.Alarm) => {
-      if (alarm.name === 'process-bookmarks') {
-        triggerProcessing()
-      }
-    })
-
     browser.runtime.onMessage.addListener((msg: unknown, _sender: unknown, sendResponse: (response: unknown) => void) => {
       if (!msg || typeof (msg as { type?: unknown }).type !== 'string') {
         sendResponse(undefined)

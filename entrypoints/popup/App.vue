@@ -79,7 +79,7 @@ async function handleCopy() {
 }
 
 function openSettings() {
-  return browser.runtime.openOptionsPage()
+  browser.tabs.create({ url: '/options.html' })
 }
 
 function openBookmarks() {
@@ -111,7 +111,7 @@ function openBookmarks() {
 
       <div class="doc-meta">
         <h2 class="doc-title">{{ doc.title }}</h2>
-        <p class="doc-source">Feishu · Article</p>
+        <p class="doc-source">飞书 · 文章</p>
       </div>
 
       <!-- 中间可滚动区域 -->
@@ -124,31 +124,31 @@ function openBookmarks() {
         </button>
         <div v-if="propertiesOpen" class="properties-body">
           <div class="prop-row">
-            <span class="prop-label">title</span>
+            <span class="prop-label">标题</span>
             <input v-model="editableTitle" class="prop-input" />
           </div>
           <div class="prop-row">
-            <span class="prop-label">source</span>
+            <span class="prop-label">来源</span>
             <input v-model="editableSource" class="prop-input" />
           </div>
           <div class="prop-row">
-            <span class="prop-label">author</span>
+            <span class="prop-label">作者</span>
             <input v-model="editableAuthor" class="prop-input" />
           </div>
           <div class="prop-row">
-            <span class="prop-label">published</span>
+            <span class="prop-label">发布时间</span>
             <input v-model="editablePublished" class="prop-input" />
           </div>
           <div class="prop-row">
-            <span class="prop-label">created</span>
+            <span class="prop-label">创建时间</span>
             <input v-model="editableCreated" class="prop-input" />
           </div>
           <div class="prop-row prop-row-desc">
-            <span class="prop-label">description</span>
+            <span class="prop-label">描述</span>
             <textarea v-model="editableDescription" class="prop-textarea" rows="3" />
           </div>
           <div class="prop-row">
-            <span class="prop-label">tags</span>
+            <span class="prop-label">标签</span>
             <input v-model="editableTags" class="prop-input" />
           </div>
         </div>
@@ -224,31 +224,31 @@ function openBookmarks() {
   flex-shrink: 0;
 }
 .header-brand {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 2.5px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--color-text);
   flex: 1;
 }
 .btn-settings {
-  font-size: 11px;
+  font-size: 14px;
   background: var(--color-dark);
   color: #fff;
   border: none;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 2px;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   flex-shrink: 0;
 }
 .btn-settings:hover { opacity: 0.8; }
 .btn-bookmarks {
-  font-size: 11px;
+  font-size: 14px;
   background: var(--color-accent);
   color: #fff;
   border: none;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border-radius: 2px;
   cursor: pointer;
   letter-spacing: 0.5px;
@@ -259,14 +259,14 @@ function openBookmarks() {
 /* Doc title area */
 .doc-meta { padding: 10px 0 0; flex-shrink: 0; }
 .doc-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
   margin: 0 0 3px;
   line-height: 1.4;
 }
 .doc-source {
-  font-size: 7px;
+  font-size: 14px;
   color: var(--color-accent);
   text-transform: uppercase;
   letter-spacing: 1.5px;
@@ -291,11 +291,10 @@ function openBookmarks() {
   text-align: left;
   padding: 6px 0;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   border-bottom: 1px solid var(--color-border-light);
   margin-bottom: 6px;
 }
@@ -307,21 +306,20 @@ function openBookmarks() {
   padding: 4px 0;
 }
 .prop-label {
-  width: 56px;
-  font-size: 6.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
+  width: 60px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--color-text-muted);
   text-align: right;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 .prop-input {
   flex: 1;
   min-width: 0;
   border: none;
   border-bottom: 1px solid var(--color-border);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text);
   font-family: var(--font-ui);
   outline: none;
@@ -334,7 +332,7 @@ function openBookmarks() {
   flex: 1;
   border: none;
   border-bottom: 1px solid var(--color-border);
-  font-size: 11px;
+  font-size: 14px;
   font-family: var(--font-ui);
   color: var(--color-text);
   outline: none;
@@ -350,7 +348,7 @@ function openBookmarks() {
   background: var(--color-surface);
   border: 1px solid var(--color-border-light);
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   font-family: var(--font-content);
   line-height: 1.7;
@@ -378,7 +376,7 @@ function openBookmarks() {
   color: #fff;
   border: none;
   padding: 10px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -416,7 +414,7 @@ function openBookmarks() {
   border: none;
   background: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   text-align: left;
   color: var(--color-text);
   font-family: var(--font-ui);
@@ -428,19 +426,19 @@ function openBookmarks() {
   border: none;
   border-radius: 2px;
   padding: 10px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   font-family: var(--font-ui);
 }
 .btn-authorize:hover { opacity: 0.85; }
-.warn-msg { color: #b45309; font-size: 11px; margin: 0; }
-.success { color: #2e7d32; font-size: 11px; margin: 0; }
-.error-msg { color: #c62828; font-size: 11px; margin: 0; }
+.warn-msg { color: #b45309; font-size: 14px; margin: 0; }
+.success { color: #2e7d32; font-size: 14px; margin: 0; }
+.error-msg { color: #c62828; font-size: 14px; margin: 0; }
 .loading, .empty-state {
   padding: 40px 0;
   text-align: center;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 </style>

@@ -53,7 +53,7 @@ function handleKeydown(e: KeyboardEvent) {
   border: none;
   border-bottom: 1px solid var(--color-border);
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-family: var(--font-ui);
   outline: none;
   line-height: 1.5;
@@ -69,7 +69,7 @@ function handleKeydown(e: KeyboardEvent) {
   color: #fff;
   border: none;
   border-radius: 2px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;

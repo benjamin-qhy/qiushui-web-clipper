@@ -54,13 +54,13 @@ function handleConfirm() {
   border-radius: 2px;
   padding: 12px;
   background: var(--color-surface);
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .proposal-title {
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -68,7 +68,7 @@ function handleConfirm() {
 }
 .tree { max-height: 240px; overflow-y: auto; }
 .old-folder-choice { display: flex; flex-direction: column; gap: 6px; }
-.choice-label { font-size: 11px; color: var(--color-text-secondary); }
+.choice-label { font-size: 14px; color: var(--color-text-secondary); }
 .choice-btns { display: flex; gap: 6px; }
 .choice-btn {
   flex: 1;
@@ -76,7 +76,7 @@ function handleConfirm() {
   border: 1px solid var(--color-border);
   border-radius: 2px;
   background: var(--color-bg);
-  font-size: 11px;
+  font-size: 14px;
   font-family: var(--font-ui);
   cursor: pointer;
   color: var(--color-text);
@@ -94,7 +94,7 @@ function handleConfirm() {
   border: 1px solid var(--color-border);
   background: var(--color-bg);
   border-radius: 2px;
-  font-size: 11px;
+  font-size: 14px;
   font-family: var(--font-ui);
   cursor: pointer;
   color: var(--color-text-secondary);
@@ -106,7 +106,7 @@ function handleConfirm() {
   color: #fff;
   border: none;
   border-radius: 2px;
-  font-size: 11px;
+  font-size: 14px;
   font-family: var(--font-ui);
   cursor: pointer;
 }

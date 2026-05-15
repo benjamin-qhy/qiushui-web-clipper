@@ -34,8 +34,11 @@ export function deduplicateByUrl(bookmarks: MinimalBookmark[]): {
 export async function isDeadLink(url: string): Promise<boolean> {
   try {
     const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
-    return res.status >= 400
+    // Only treat explicit "not found" / "gone" as dead links.
+    // Network errors, timeouts, CORS failures, server errors etc. are NOT dead links.
+    return res.status === 404 || res.status === 410
   } catch {
-    return true
+    // Network error / timeout / CORS — cannot determine, assume alive
+    return false
   }
 }

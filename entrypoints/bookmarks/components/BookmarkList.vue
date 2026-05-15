@@ -81,13 +81,13 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 }
 .folder-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   flex: 1;
   color: var(--color-text);
 }
 .count {
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -95,7 +95,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 .empty-hint {
   padding: 48px 18px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
 }
 .bookmark-list {
@@ -119,7 +119,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 .bm-content { flex: 1; min-width: 0; cursor: pointer; }
 .bm-title {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -128,7 +128,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 }
 .bm-url {
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -138,7 +138,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 .bm-content:hover .bm-title { color: var(--color-accent); }
 .badge-processed {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 14px;
   padding: 1px 6px;
   border: 1px solid var(--color-accent);
   color: var(--color-accent);
@@ -150,7 +150,7 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--color-text-muted);
   padding: 2px 6px;
   border-radius: 2px;
