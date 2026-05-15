@@ -41,7 +41,10 @@ function setError(e: unknown) {
 <template>
   <div class="layout">
     <div class="pane-left">
-      <div class="pane-header">书签文件夹</div>
+      <div class="pane-header">
+        <div class="pane-brand">Qiushui</div>
+        <div class="pane-title">Bookmarks</div>
+      </div>
       <div class="pane-body">
         <FolderTree
           :nodes="tree.folderTree.value"
@@ -77,7 +80,7 @@ function setError(e: unknown) {
 
 <style>
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--color-base); }
 </style>
 
 <style scoped>
@@ -85,23 +88,36 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
   display: flex;
   height: 100vh;
   overflow: hidden;
-  color: #222;
+  color: var(--color-text);
+  background: var(--color-bg);
 }
 .pane-left {
-  width: 220px;
+  width: 200px;
   flex-shrink: 0;
-  border-right: 1px solid #e0e0e0;
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--color-surface);
 }
 .pane-header {
-  padding: 12px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #555;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+}
+.pane-brand {
+  font-size: 7px;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 2px;
+}
+.pane-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 0.3px;
 }
 .pane-body {
   flex: 1;
@@ -112,6 +128,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
   flex: 1;
   min-width: 0;
   overflow: hidden;
+  background: var(--color-bg);
 }
 .global-error {
   position: fixed;
@@ -121,8 +138,8 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
   background: #fce8e6;
   color: #c62828;
   padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 2px;
+  font-size: 12px;
   border: 1px solid #f5c6c6;
   z-index: 100;
 }
