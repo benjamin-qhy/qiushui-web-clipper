@@ -42,34 +42,39 @@ function handleKeydown(e: KeyboardEvent) {
 .chat-input {
   display: flex;
   gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #e0e0e0;
-  background: #fafafa;
+  padding: 10px 12px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
   flex-shrink: 0;
 }
 .input {
   flex: 1;
   resize: none;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 13px;
-  font-family: inherit;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: var(--font-ui);
   outline: none;
   line-height: 1.5;
+  background: transparent;
+  color: var(--color-text);
 }
-.input:focus { border-color: #6e4dc4; }
-.input:disabled { background: #f5f5f5; }
+.input:focus { border-bottom-color: var(--color-accent); }
+.input:disabled { opacity: 0.5; }
 .send-btn {
   align-self: flex-end;
-  padding: 8px 14px;
-  background: #6e4dc4;
+  padding: 6px 14px;
+  background: var(--color-accent);
   color: #fff;
   border: none;
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  font-family: var(--font-ui);
 }
+.send-btn:hover { opacity: 0.85; }
 .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

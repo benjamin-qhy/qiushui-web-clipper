@@ -70,7 +70,7 @@ watch(() => props.messages.length, async () => {
 .messages {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -81,35 +81,42 @@ watch(() => props.messages.length, async () => {
 .bubble {
   max-width: 85%;
   padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.6;
   word-break: break-word;
+  border-radius: 2px;
 }
-.user-bubble { background: #6e4dc4; color: #fff; border-bottom-right-radius: 3px; }
-.ai-bubble { background: #fff; border: 1px solid #e0e0e0; border-bottom-left-radius: 3px; color: #222; }
+.user-bubble {
+  background: var(--color-dark);
+  color: #fff;
+}
+.ai-bubble {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
 .proposal-wrap { width: 100%; }
 .thinking-block {
   width: 100%;
-  background: #f9f9f9;
-  border: 1px solid #ebebeb;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
   overflow: hidden;
 }
 .thinking-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 7px 10px;
   cursor: pointer;
   user-select: none;
 }
-.thinking-toggle { font-size: 10px; color: #999; }
-.thinking-title { font-size: 12px; color: #888; }
+.thinking-toggle { font-size: 9px; color: var(--color-text-muted); }
+.thinking-title { font-size: 11px; color: var(--color-text-secondary); }
 .thinking-lines { padding: 4px 10px 8px; display: flex; flex-direction: column; gap: 2px; }
 .thinking-line {
   font-size: 11px;
-  color: #aaa;
+  color: var(--color-text-muted);
   display: flex;
   gap: 6px;
   align-items: flex-start;
@@ -117,5 +124,5 @@ watch(() => props.messages.length, async () => {
 .thinking-line.ok .line-icon { color: #4caf50; }
 .thinking-line.error { color: #f44336; }
 .thinking-line.error .line-icon { color: #f44336; }
-.thinking-line.skip .line-icon { color: #bbb; }
+.thinking-line.skip .line-icon { color: var(--color-text-muted); }
 </style>

@@ -50,33 +50,66 @@ function handleConfirm() {
 
 <style scoped>
 .proposal {
-  border: 1px solid #d1c4e9;
-  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
   padding: 12px;
-  background: #f3effe;
-  font-size: 13px;
+  background: var(--color-surface);
+  font-size: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.proposal-title { font-weight: 600; color: #4a148c; font-size: 12px; }
+.proposal-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
 .tree { max-height: 240px; overflow-y: auto; }
 .old-folder-choice { display: flex; flex-direction: column; gap: 6px; }
-.choice-label { font-size: 12px; color: #555; }
+.choice-label { font-size: 11px; color: var(--color-text-secondary); }
 .choice-btns { display: flex; gap: 6px; }
 .choice-btn {
-  flex: 1; padding: 5px 8px; border: 1px solid #ccc; border-radius: 5px;
-  background: #fff; font-size: 12px; cursor: pointer;
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  color: var(--color-text);
 }
-.choice-btn.active { border-color: #6e4dc4; background: #ede7f6; color: #6e4dc4; font-weight: 500; }
+.choice-btn:hover { border-color: var(--color-text-muted); }
+.choice-btn.active {
+  border-color: var(--color-accent);
+  background: #fff7f0;
+  color: var(--color-accent);
+  font-weight: 600;
+}
 .actions { display: flex; gap: 8px; justify-content: flex-end; }
 .btn-modify {
-  padding: 6px 14px; border: 1px solid #ccc; background: #fff;
-  border-radius: 5px; font-size: 12px; cursor: pointer;
+  padding: 5px 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  color: var(--color-text-secondary);
 }
+.btn-modify:hover { border-color: var(--color-text-muted); color: var(--color-text); }
 .btn-confirm {
-  padding: 6px 14px; background: #6e4dc4; color: #fff;
-  border: none; border-radius: 5px; font-size: 12px; cursor: pointer;
+  padding: 5px 14px;
+  background: var(--color-dark);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 11px;
+  font-family: var(--font-ui);
+  cursor: pointer;
 }
+.btn-confirm:hover { opacity: 0.85; }
 .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

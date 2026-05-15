@@ -24,22 +24,32 @@ defineEmits<{
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
   padding: 24px;
 }
-.hint { font-size: 12px; color: #aaa; margin: 0 0 4px; }
+.hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin: 0 0 6px;
+}
 .quick-btn {
   width: 100%;
   max-width: 200px;
-  padding: 10px 16px;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 13px;
+  padding: 9px 16px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  color: var(--color-text);
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s;
 }
-.quick-btn:hover { background: #ede7f6; border-color: #b39ddb; }
+.quick-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
 </style>
