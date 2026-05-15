@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useSettings } from '../../src/composables/useSettings'
 import { useVaultStore } from '../../src/composables/useVaultStore'
 
@@ -22,9 +22,47 @@ const ossRegions = [
   { value: 'oss-cn-hongkong', label: '中国香港' },
 ]
 
+const version = '2.0.0'
+const mainEl = ref<HTMLElement | null>(null)
+const activeSection = ref('vault')
+const sectionIds = ['vault', 'images', 'ai', 'org', 'inbox']
+
+let observer: IntersectionObserver | null = null
+
+function scrollTo(id: string) {
+  const el = document.getElementById(`section-${id}`)
+  if (el && mainEl.value) {
+    mainEl.value.scrollTo({ top: el.offsetTop - 16, behavior: 'smooth' })
+  }
+}
+
+function setupObserver() {
+  if (!mainEl.value) return
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const id = entry.target.id.replace('section-', '')
+          activeSection.value = id
+          break
+        }
+      }
+    },
+    { root: mainEl.value, threshold: 0.3 }
+  )
+  for (const id of sectionIds) {
+    const el = document.getElementById(`section-${id}`)
+    if (el) observer.observe(el)
+  }
+}
+
+onUnmounted(() => observer?.disconnect())
+
 onMounted(async () => {
   await load()
   await vault.init()
+  await nextTick()
+  setupObserver()
 })
 
 const vaultName = computed(() => vault.handle.value?.name ?? null)
@@ -146,405 +184,426 @@ async function testAIModel() {
 </script>
 
 <template>
-  <main class="page">
-    <h1 class="title">秋水 · 网页剪藏 · 设置</h1>
+  <div class="settings-layout">
+    <!-- Left nav -->
+    <nav class="settings-nav">
+      <div class="nav-header">
+        <div class="nav-brand">Qiushui Clipper</div>
+        <div class="nav-title">Settings</div>
+      </div>
+      <div class="nav-body">
+        <div class="nav-group-label">General</div>
+        <a class="nav-item" :class="{ active: activeSection === 'vault' }" href="#section-vault" @click.prevent="scrollTo('vault')">Vault</a>
+        <a class="nav-item" :class="{ active: activeSection === 'images' }" href="#section-images" @click.prevent="scrollTo('images')">Images</a>
+        <a class="nav-item" :class="{ active: activeSection === 'ai' }" href="#section-ai" @click.prevent="scrollTo('ai')">AI Model</a>
+        <div class="nav-group-label">Bookmarks</div>
+        <a class="nav-item" :class="{ active: activeSection === 'org' }" href="#section-org" @click.prevent="scrollTo('org')">Organization</a>
+        <a class="nav-item" :class="{ active: activeSection === 'inbox' }" href="#section-inbox" @click.prevent="scrollTo('inbox')">Inbox</a>
+      </div>
+      <div class="nav-footer">v{{ version }}</div>
+    </nav>
 
-    <section class="section">
-      <h2 class="section-title">Vault 配置</h2>
+    <!-- Right content -->
+    <main class="settings-main" ref="mainEl">
 
-      <div class="field">
-        <label class="label">Obsidian Vault 目录</label>
-        <div class="vault-row">
-          <span class="vault-name">{{ vaultName ?? '未选择' }}</span>
-          <button class="btn-secondary" type="button" @click="handleVaultAction">
-            {{ vaultButtonLabel }}
-          </button>
+      <div class="main-topbar">
+        <div></div>
+        <button class="btn-save" type="button" :disabled="isSaving" @click="save">
+          {{ isSaving ? 'Saving…' : 'Save Settings' }}
+        </button>
+      </div>
+
+      <!-- Vault -->
+      <section id="section-vault" class="settings-section">
+        <div class="section-header">
+          <h2 class="section-title">Vault</h2>
+          <p class="section-desc">Obsidian 笔记库配置</p>
         </div>
-      </div>
-
-      <div class="field">
-        <label class="label" for="sub-dir">默认子目录</label>
-        <input id="sub-dir" v-model="settings.subDir" class="input" placeholder="Clippings" />
-        <p class="hint">笔记会保存到 Vault 下的此子目录中，留空则保存到 Vault 根目录。</p>
-      </div>
-    </section>
-
-    <section class="section">
-      <h2 class="section-title">图片处理方式</h2>
-
-      <div class="radio-group">
-        <label class="radio-label">
-          <input v-model="settings.imageMode" type="radio" value="local" />
-          保存到本地 Vault
-        </label>
-        <label class="radio-label">
-          <input v-model="settings.imageMode" type="radio" value="oss" />
-          上传到云存储
-        </label>
-      </div>
-    </section>
-
-    <section v-if="settings.imageMode === 'oss'" class="section">
-      <h2 class="section-title">云存储配置</h2>
-
-      <div class="field">
-        <label class="label" for="oss-provider">云存储平台</label>
-        <select id="oss-provider" v-model="settings.ossProvider" class="input">
-          <option value="aliyun">阿里云 OSS</option>
-        </select>
-      </div>
-
-      <template v-if="settings.ossProvider === 'aliyun'">
-        <div class="divider-label">阿里云 OSS</div>
-
         <div class="field">
-          <label class="label" for="access-key-id">Access Key ID</label>
-          <input id="access-key-id" v-model="settings.aliyunOSS.accessKeyId" class="input" autocomplete="off" />
-        </div>
-
-        <div class="field">
-          <label class="label" for="access-key-secret">Access Key Secret</label>
-          <div class="secret-row">
-            <input
-              id="access-key-secret"
-              v-model="settings.aliyunOSS.accessKeySecret"
-              :type="showSecret ? 'text' : 'password'"
-              class="input"
-              autocomplete="off"
-            />
-            <button class="btn-secondary" type="button" @click="showSecret = !showSecret">
-              {{ showSecret ? '隐藏' : '显示' }}
-            </button>
+          <label class="field-label">Vault Path</label>
+          <div class="vault-row">
+            <span class="vault-name">{{ vaultName ?? '未选择' }}</span>
+            <button class="btn-secondary" type="button" @click="handleVaultAction">{{ vaultButtonLabel }}</button>
           </div>
         </div>
-
         <div class="field">
-          <label class="label" for="oss-bucket">Bucket 名称</label>
-          <input id="oss-bucket" v-model="settings.aliyunOSS.bucket" class="input" autocomplete="off" />
+          <label class="field-label" for="sub-dir">Sub Directory</label>
+          <input id="sub-dir" v-model="settings.subDir" class="field-input" placeholder="Clippings" />
+          <p class="field-hint">笔记会保存到 Vault 下的此子目录，留空则保存到根目录。</p>
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <!-- Images -->
+      <section id="section-images" class="settings-section">
+        <div class="section-header">
+          <h2 class="section-title">Images</h2>
+          <p class="section-desc">图片存储方式</p>
+        </div>
+        <div class="field">
+          <label class="field-label">Image Mode</label>
+          <div class="mode-group">
+            <button
+              class="mode-btn"
+              :class="{ active: settings.imageMode === 'local' }"
+              type="button"
+              @click="settings.imageMode = 'local'"
+            >Local</button>
+            <button
+              class="mode-btn"
+              :class="{ active: settings.imageMode === 'oss' }"
+              type="button"
+              @click="settings.imageMode = 'oss'"
+            >Aliyun OSS</button>
+          </div>
+          <p class="field-hint">Local: 图片保存到 .assets 子目录</p>
         </div>
 
-        <div class="field">
-          <label class="label" for="oss-region">地域</label>
-          <select id="oss-region" v-model="settings.aliyunOSS.region" class="input">
-            <option v-for="region in ossRegions" :key="region.value" :value="region.value">
-              {{ region.label }}
-            </option>
-          </select>
-        </div>
+        <template v-if="settings.imageMode === 'oss'">
+          <div class="field">
+            <label class="field-label" for="access-key-id">Access Key ID</label>
+            <input id="access-key-id" v-model="settings.aliyunOSS.accessKeyId" class="field-input" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="access-key-secret">Access Key Secret</label>
+            <div class="secret-row">
+              <input id="access-key-secret" v-model="settings.aliyunOSS.accessKeySecret" :type="showSecret ? 'text' : 'password'" class="field-input" autocomplete="off" />
+              <button class="btn-secondary" type="button" @click="showSecret = !showSecret">{{ showSecret ? '隐藏' : '显示' }}</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="oss-bucket">Bucket</label>
+            <input id="oss-bucket" v-model="settings.aliyunOSS.bucket" class="field-input" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="oss-region">Region</label>
+            <select id="oss-region" v-model="settings.aliyunOSS.region" class="field-input field-select">
+              <option v-for="region in ossRegions" :key="region.value" :value="region.value">{{ region.label }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="oss-prefix">Path Prefix</label>
+            <input id="oss-prefix" v-model="settings.aliyunOSS.prefix" class="field-input" placeholder="qiushui-web-clipper" />
+            <p class="field-hint preview-path">{{ ossPathPreview }}</p>
+          </div>
+          <div class="field">
+            <label class="field-label" for="oss-custom-domain">Custom Domain</label>
+            <input id="oss-custom-domain" v-model="settings.aliyunOSS.customDomain" class="field-input" placeholder="https://img.example.com" autocomplete="off" />
+          </div>
+          <div class="field test-row">
+            <button class="btn-secondary" type="button" :disabled="testStatus === 'testing'" @click="testConnection">
+              {{ testStatus === 'testing' ? '测试中…' : '测试连接' }}
+            </button>
+            <span v-if="testStatus === 'ok'" class="status-ok">✓ 连接成功</span>
+            <span v-else-if="testStatus === 'fail'" class="status-fail">✗ {{ testError }}</span>
+          </div>
+        </template>
+      </section>
 
-        <div class="field">
-          <label class="label" for="oss-prefix">路径前缀</label>
-          <input id="oss-prefix" v-model="settings.aliyunOSS.prefix" class="input" placeholder="qiushui-web-clipper" />
-          <p class="hint preview">路径预览：{{ ossPathPreview }}</p>
-        </div>
+      <div class="section-divider"></div>
 
-        <div class="field">
-          <label class="label" for="oss-custom-domain">自定义访问域名</label>
-          <input
-            id="oss-custom-domain"
-            v-model="settings.aliyunOSS.customDomain"
-            class="input"
-            placeholder="https://img.example.com"
-            autocomplete="off"
-          />
-          <p class="hint">留空则使用默认 OSS 域名；填写后 Markdown 图片链接会优先使用这个域名。</p>
+      <!-- AI Model -->
+      <section id="section-ai" class="settings-section">
+        <div class="section-header">
+          <h2 class="section-title">AI Model</h2>
+          <p class="section-desc">AI 模型配置</p>
         </div>
-
+        <div class="field">
+          <label class="field-label" for="ai-base-url">Base URL</label>
+          <input id="ai-base-url" v-model="settings.aiConfig.baseUrl" class="field-input" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
+          <p class="field-hint">支持任意 OpenAI 兼容接口</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="ai-api-key">API Key</label>
+          <div class="secret-row">
+            <input id="ai-api-key" v-model="settings.aiConfig.apiKey" :type="showAISecret ? 'text' : 'password'" class="field-input" autocomplete="off" />
+            <button class="btn-secondary" type="button" @click="showAISecret = !showAISecret">{{ showAISecret ? '隐藏' : '显示' }}</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="ai-model">Model</label>
+          <input id="ai-model" v-model="settings.aiConfig.model" class="field-input" placeholder="qwen-long" />
+        </div>
         <div class="field test-row">
-          <button class="btn-secondary" type="button" :disabled="testStatus === 'testing'" @click="testConnection">
-            {{ testStatus === 'testing' ? '测试中…' : '测试连接' }}
+          <button class="btn-secondary" type="button" :disabled="aiTestStatus === 'testing'" @click="testAIModel">
+            {{ aiTestStatus === 'testing' ? '测试中…' : '测试模型' }}
           </button>
-          <span v-if="testStatus === 'ok'" class="test-ok">✓ 连接成功</span>
-          <span v-else-if="testStatus === 'fail'" class="test-fail">✗ {{ testError }}</span>
+          <span v-if="aiTestStatus === 'ok'" class="status-ok">✓ 模型可用</span>
+          <span v-else-if="aiTestStatus === 'fail'" class="status-fail">✗ {{ aiTestError }}</span>
         </div>
-      </template>
-    </section>
+      </section>
 
-    <section class="section">
-      <h2 class="section-title">AI 配置</h2>
+      <div class="section-divider"></div>
 
-      <div class="field">
-        <label class="label" for="ai-base-url">API 地址</label>
-        <input
-          id="ai-base-url"
-          v-model="settings.aiConfig.baseUrl"
-          class="input"
-          placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1"
-        />
-        <p class="hint">支持任意 OpenAI 兼容接口，默认为阿里云通义千问。</p>
-      </div>
-
-      <div class="field">
-        <label class="label" for="ai-api-key">API Key</label>
-        <div class="secret-row">
-          <input
-            id="ai-api-key"
-            v-model="settings.aiConfig.apiKey"
-            :type="showAISecret ? 'text' : 'password'"
-            class="input"
-            autocomplete="off"
-          />
-          <button class="btn-secondary" type="button" @click="showAISecret = !showAISecret">
-            {{ showAISecret ? '隐藏' : '显示' }}
-          </button>
+      <!-- Organization -->
+      <section id="section-org" class="settings-section">
+        <div class="section-header">
+          <h2 class="section-title">Organization</h2>
+          <p class="section-desc">书签整理配置</p>
         </div>
-      </div>
+        <div class="field">
+          <label class="field-label" for="bookmark-inbox">Inbox Folder</label>
+          <input id="bookmark-inbox" v-model="settings.bookmarkInboxFolder" class="field-input" placeholder="待整理" />
+          <p class="field-hint">将书签收藏到该文件夹后，插件会自动整理其中的内容。</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="bookmark-sub-dir">Obsidian Sub Directory</label>
+          <input id="bookmark-sub-dir" v-model="settings.bookmarkSubDir" class="field-input" placeholder="Bookmarks" />
+          <p class="field-hint">整理后的书签笔记将保存到 Vault 下的此子目录中。</p>
+        </div>
+      </section>
 
-      <div class="field">
-        <label class="label" for="ai-model">模型</label>
-        <input
-          id="ai-model"
-          v-model="settings.aiConfig.model"
-          class="input"
-          placeholder="qwen-long"
-        />
-      </div>
+      <div class="section-divider"></div>
 
-      <div class="field test-row">
-        <button class="btn-secondary" type="button" :disabled="aiTestStatus === 'testing'" @click="testAIModel">
-          {{ aiTestStatus === 'testing' ? '测试中…' : '测试模型' }}
+      <!-- Inbox -->
+      <section id="section-inbox" class="settings-section">
+        <div class="section-header">
+          <h2 class="section-title">Inbox</h2>
+          <p class="section-desc">自动处理设置</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="process-interval">Process Interval (hours)</label>
+          <input id="process-interval" v-model.number="settings.processInterval" class="field-input" type="number" min="1" max="168" style="max-width: 120px;" />
+        </div>
+      </section>
+
+      <div class="section-divider"></div>
+
+      <div class="bottom-save">
+        <span v-if="saveStatus === 'saved'" class="status-ok">✓ 已保存</span>
+        <span v-else-if="saveStatus === 'error'" class="status-fail">保存失败</span>
+        <button class="btn-save" type="button" :disabled="isSaving" @click="save">
+          {{ isSaving ? 'Saving…' : 'Save Settings' }}
         </button>
-        <span v-if="aiTestStatus === 'ok'" class="test-ok">✓ 模型可用</span>
-        <span v-else-if="aiTestStatus === 'fail'" class="test-fail">✗ {{ aiTestError }}</span>
-      </div>
-    </section>
-
-    <section class="section">
-      <h2 class="section-title">书签整理</h2>
-
-      <div class="field">
-        <label class="label" for="bookmark-inbox">待整理文件夹名称</label>
-        <input
-          id="bookmark-inbox"
-          v-model="settings.bookmarkInboxFolder"
-          class="input"
-          placeholder="待整理"
-        />
-        <p class="hint">将书签收藏到该文件夹后，插件会自动整理其中的内容。</p>
       </div>
 
-      <div class="field">
-        <label class="label" for="process-interval">自动整理间隔（小时）</label>
-        <input
-          id="process-interval"
-          v-model.number="settings.processInterval"
-          class="input"
-          type="number"
-          min="1"
-          max="168"
-        />
-      </div>
-
-      <div class="field">
-        <label class="label" for="bookmark-sub-dir">Obsidian 书签子目录</label>
-        <input
-          id="bookmark-sub-dir"
-          v-model="settings.bookmarkSubDir"
-          class="input"
-          placeholder="Bookmarks"
-        />
-        <p class="hint">整理后的书签笔记将保存到 Vault 下的此子目录中。</p>
-      </div>
-    </section>
-
-    <footer class="footer">
-      <button class="btn-save" type="button" :disabled="isSaving" @click="save">
-        {{ isSaving ? '保存中…' : '保存设置' }}
-      </button>
-      <span v-if="saveStatus === 'saved'" class="save-ok">✓ 已保存</span>
-      <span v-else-if="saveStatus === 'error'" class="save-fail">保存失败</span>
-    </footer>
-  </main>
+    </main>
+  </div>
 </template>
 
 <style scoped>
-.page {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 32px 24px;
-  color: #222;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+.settings-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  font-family: var(--font-ui);
+  background: var(--color-base);
+  color: var(--color-text);
 }
 
-.title {
-  margin: 0 0 24px;
-  font-size: 20px;
+/* Left Nav */
+.settings-nav {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.nav-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.nav-brand {
+  font-size: 7px;
   font-weight: 600;
-  line-height: 1.35;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 3px;
 }
-
-.section {
-  margin-bottom: 20px;
-  padding: 20px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #fff;
-}
-
-.section-title {
-  margin: 0 0 16px;
-  color: #444;
+.nav-title {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: 0.3px;
 }
-
-.field {
-  margin-bottom: 14px;
+.nav-body {
+  flex: 1;
+  padding: 14px 0;
+  overflow-y: auto;
 }
-
-.field:last-child {
-  margin-bottom: 0;
+.nav-group-label {
+  font-size: 6px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 8px 20px 6px;
+  margin-top: 4px;
 }
-
-.label {
-  display: block;
-  margin-bottom: 5px;
-  color: #555;
+.nav-group-label:first-child { margin-top: 0; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  text-decoration: none;
+  color: var(--color-text-secondary);
   font-size: 13px;
+  padding: 7px 20px;
+  cursor: pointer;
+  transition: color 0.1s;
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+}
+.nav-item:hover { color: var(--color-text); }
+.nav-item.active {
+  color: var(--color-text);
+  font-weight: 600;
+  border-left-color: var(--color-accent);
+}
+.nav-footer {
+  padding: 12px 20px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
 }
 
-.input {
+/* Right Main */
+.settings-main {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--color-bg);
+}
+.main-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 40px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.settings-section {
+  padding: 28px 40px;
+}
+.section-header { margin-bottom: 20px; }
+.section-title {
+  margin: 0 0 3px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+.section-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.section-divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: 0 40px;
+}
+.field { margin-bottom: 18px; max-width: 520px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--color-text-muted);
+  margin-bottom: 7px;
+}
+.field-input {
   box-sizing: border-box;
   width: 100%;
-  padding: 7px 10px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  background: var(--color-surface);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 10px;
   font-size: 13px;
-  line-height: 1.4;
+  color: var(--color-text);
+  font-family: var(--font-ui);
   outline: none;
 }
-
-.input:focus {
-  border-color: #6e4dc4;
-}
-
-.hint {
-  margin: 5px 0 0;
-  color: #888;
+.field-input:focus { border-bottom-color: var(--color-accent); }
+.field-select { cursor: pointer; }
+.field-hint {
+  margin: 6px 0 0;
   font-size: 11px;
-  line-height: 1.4;
+  color: var(--color-text-muted);
+  line-height: 1.5;
 }
-
-.preview {
-  word-break: break-all;
+.preview-path {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
 }
-
-.vault-row,
-.secret-row,
-.footer,
-.test-row {
+.vault-row, .secret-row, .test-row {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .vault-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  color: #333;
   font-size: 13px;
+  color: var(--color-text);
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 10px;
 }
-
-.secret-row .input {
-  flex: 1;
+.secret-row .field-input { flex: 1; }
+.mode-group { display: flex; gap: 6px; margin-bottom: 6px; }
+.mode-btn {
+  padding: 6px 18px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  letter-spacing: 0.3px;
 }
-
-.radio-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.mode-btn:hover { border-color: var(--color-text-muted); }
+.mode-btn.active {
+  background: var(--color-dark);
+  color: #fff;
+  border-color: var(--color-dark);
 }
-
-.radio-label {
+.btn-secondary {
+  padding: 7px 16px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+}
+.btn-secondary:hover { border-color: var(--color-text-muted); color: var(--color-text); }
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-save {
+  padding: 8px 22px;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+}
+.btn-save:hover { opacity: 0.85; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.status-ok { color: #2e7d32; font-size: 12px; }
+.status-fail { color: #c62828; font-size: 12px; word-break: break-word; }
+.bottom-save {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.divider-label {
-  margin-bottom: 14px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #eee;
-  color: #888;
-  font-size: 12px;
-}
-
-.btn-secondary,
-.btn-save {
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1.3;
-  white-space: nowrap;
-}
-
-.btn-secondary {
-  padding: 6px 14px;
-  border: 1px solid #ccc;
-  background: #f5f5f5;
-  color: #222;
-}
-
-.btn-secondary:hover {
-  background: #eee;
-}
-
-.btn-save {
-  padding: 10px 24px;
-  border: 0;
-  background: #6e4dc4;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.btn-secondary:disabled,
-.btn-save:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.test-ok,
-.save-ok {
-  color: #2e7d32;
-  font-size: 13px;
-}
-
-.test-fail,
-.save-fail {
-  color: #c62828;
-  font-size: 13px;
-}
-
-.test-fail {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.footer {
-  padding-top: 4px;
-}
-
-@media (max-width: 520px) {
-  .page {
-    padding: 20px 14px;
-  }
-
-  .section {
-    padding: 16px;
-  }
-
-  .vault-row,
-  .secret-row,
-  .test-row {
-    align-items: stretch;
-    flex-direction: column;
-  }
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px 40px 40px;
 }
 </style>
