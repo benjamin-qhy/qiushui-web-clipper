@@ -32,7 +32,8 @@ let observer: IntersectionObserver | null = null
 function scrollTo(id: string) {
   const el = document.getElementById(`section-${id}`)
   if (el && mainEl.value) {
-    mainEl.value.scrollTo({ top: el.offsetTop - 16, behavior: 'smooth' })
+    const top = el.getBoundingClientRect().top - mainEl.value.getBoundingClientRect().top + mainEl.value.scrollTop - 16
+    mainEl.value.scrollTo({ top, behavior: 'smooth' })
   }
 }
 
@@ -48,7 +49,7 @@ function setupObserver() {
         }
       }
     },
-    { root: mainEl.value, threshold: 0.3 }
+    { root: mainEl.value, threshold: 0, rootMargin: '-10% 0px -80% 0px' }
   )
   for (const id of sectionIds) {
     const el = document.getElementById(`section-${id}`)
