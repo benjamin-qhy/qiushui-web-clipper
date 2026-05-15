@@ -80,7 +80,7 @@ function setError(e: unknown) {
 
 <style>
 * { box-sizing: border-box; }
-body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--color-base); }
+body { margin: 0; font-family: var(--font-ui); background: var(--color-base); }
 </style>
 
 <style scoped>

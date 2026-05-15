@@ -165,7 +165,6 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
 
 <style scoped>
 .folder-list { list-style: none; margin: 0; padding: 0; }
-.folder-item { }
 .folder-row {
   display: flex;
   align-items: center;

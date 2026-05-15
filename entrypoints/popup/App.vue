@@ -351,7 +351,7 @@ function openBookmarks() {
   border: 1px solid var(--color-border-light);
   padding: 10px 12px;
   font-size: 12px;
-  color: #555;
+  color: var(--color-text-secondary);
   font-family: var(--font-content);
   line-height: 1.7;
   width: 100%;
