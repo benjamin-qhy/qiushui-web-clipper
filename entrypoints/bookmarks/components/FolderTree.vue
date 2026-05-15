@@ -170,35 +170,70 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 5px 12px;
   cursor: pointer;
   user-select: none;
   position: relative;
 }
-.folder-row:hover { background: #f5f5f5; }
-.folder-row.selected { background: #ede9f7; }
-.folder-row.drag-over { background: #d4e4ff; outline: 2px solid #1a73e8; }
-.expand-btn {
-  background: none; border: none; cursor: pointer;
-  font-size: 11px; color: #888; width: 16px; flex-shrink: 0; padding: 0;
+.folder-row:hover { background: var(--color-border-light); }
+.folder-row.selected {
+  background: var(--color-dark);
+  color: #fff;
 }
-.folder-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-row.selected .folder-name { color: #fff; }
+.folder-row.selected .expand-btn { color: rgba(255,255,255,0.6); }
+.folder-row.drag-over {
+  background: #fff3e0;
+  outline: 1px solid var(--color-accent);
+}
+.expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  width: 14px;
+  flex-shrink: 0;
+  padding: 0;
+}
+.folder-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .folder-actions {
   display: none;
-  gap: 2px;
+  gap: 1px;
   align-items: center;
 }
 .folder-row:hover .folder-actions { display: flex; }
+.folder-row.selected .folder-actions { display: flex; }
 .action-btn {
-  background: none; border: none; cursor: pointer;
-  font-size: 12px; color: #888; padding: 1px 4px; border-radius: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 1px 4px;
+  border-radius: 2px;
 }
-.action-btn:hover { background: #e0e0e0; color: #333; }
+.folder-row.selected .action-btn { color: rgba(255,255,255,0.6); }
+.folder-row.selected .action-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.action-btn:hover { background: var(--color-border); color: var(--color-text); }
 .action-btn.danger:hover { background: #fce8e6; color: #c62828; }
-.new-folder-row { padding-left: 32px; }
+.new-folder-row { padding-left: 30px; }
 .inline-input {
-  flex: 1; font-size: 13px; border: 1px solid #6e4dc4;
-  border-radius: 3px; padding: 1px 4px; outline: none;
+  flex: 1;
+  font-size: 12px;
+  border: none;
+  border-bottom: 1px solid var(--color-accent);
+  padding: 1px 4px;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  color: var(--color-text);
 }
 </style>
