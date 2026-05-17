@@ -50,6 +50,8 @@ export interface DocMeta {
 
 export interface DocContent extends DocMeta {
   blocks: Block[]
+  /** 通用网页路径直接给出 markdown 字符串；飞书/金山路径不设置此字段 */
+  markdown?: string
 }
 
 // Content Script ↔ Popup 消息协议
