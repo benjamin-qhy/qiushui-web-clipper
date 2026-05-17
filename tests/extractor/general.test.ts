@@ -17,7 +17,8 @@ describe('extractGeneral', () => {
       <main>
         <article>
           <h1>Basic Article</h1>
-          <p>This is the primary article body that should become markdown.</p>
+          <p>This is the <strong>primary article body</strong> that should become markdown.</p>
+          <p>It links to <a href="https://example.com/x">an example</a>.</p>
           <p>It includes a second paragraph with useful content.</p>
         </article>
       </main>
@@ -30,8 +31,10 @@ describe('extractGeneral', () => {
     expect(result.source).toBe(window.location.href)
     expect(result.blocks).toEqual([])
     expect(result.created).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(result.markdown).toContain('This is the primary article body')
+    expect(result.markdown).toContain('This is the **primary article body**')
+    expect(result.markdown).toContain('[an example](https://example.com/x)')
     expect(result.markdown).toContain('second paragraph')
+    expect(result.markdown).not.toContain('<p>')
     expect(result.markdown).not.toContain('Navigation that should not be clipped')
     expect(result.markdown).not.toContain('Sidebar promo that should not be clipped')
   })
@@ -62,6 +65,8 @@ describe('extractGeneral', () => {
     const result = extractGeneral()
 
     expect(result.markdown).toContain('https://cdn.example.com/images/photo.jpg')
+    expect(result.markdown).toContain('![Remote photo](https://cdn.example.com/images/photo.jpg)')
+    expect(result.markdown).not.toContain('<img')
     expect(result.markdown).not.toContain('data:')
     expect(result.markdown).not.toContain('base64')
   })
