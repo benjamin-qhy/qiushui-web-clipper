@@ -25,7 +25,7 @@ export function useDocContent() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       if (msg.includes('Could not establish connection') || msg.includes('Receiving end does not exist')) {
-        error.value = '当前页面不支持，请在飞书或金山文档页面使用此插件'
+        error.value = '当前页面不支持提取（例如 chrome:// 或浏览器内置页面）'
       } else {
         error.value = msg
       }

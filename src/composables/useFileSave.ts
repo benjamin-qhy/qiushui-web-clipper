@@ -24,23 +24,29 @@ export function useFileSave() {
 
     try {
       const settings = await getSettings()
-      const uploader = createUploader(settings)
-      const notename = sanitizeFilename(doc.title)
-      const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
-      const blocks =
-        tab?.id != null
-          ? await downloadAndReplaceImages(
-              doc.blocks,
-              tab.id,
-              vaultHandle,
-              settings.subDir,
-              notename,
-              uploader,
-            )
-          : doc.blocks
-
       const frontmatter = buildFrontmatter(doc)
-      const body = blocksToMarkdown(blocks)
+      let body: string
+
+      if (doc.markdown !== undefined) {
+        body = doc.markdown
+      } else {
+        const uploader = createUploader(settings)
+        const notename = sanitizeFilename(doc.title)
+        const [tab] = await browser.tabs.query({ active: true, currentWindow: true })
+        const blocks =
+          tab?.id != null
+            ? await downloadAndReplaceImages(
+                doc.blocks,
+                tab.id,
+                vaultHandle,
+                settings.subDir,
+                notename,
+                uploader,
+              )
+            : doc.blocks
+        body = blocksToMarkdown(blocks)
+      }
+
       const content = `${frontmatter}\n${body}\n`
 
       const filename = await saveToVault(vaultHandle, settings.subDir, doc.title, content)
@@ -54,7 +60,7 @@ export function useFileSave() {
 
   async function copyToClipboard(doc: DocContent) {
     const frontmatter = buildFrontmatter(doc)
-    const body = blocksToMarkdown(doc.blocks)
+    const body = doc.markdown !== undefined ? doc.markdown : blocksToMarkdown(doc.blocks)
     const content = `${frontmatter}\n${body}\n`
     await navigator.clipboard.writeText(content)
   }
