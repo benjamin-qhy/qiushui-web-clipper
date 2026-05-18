@@ -4,7 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useVaultStore } from '../../src/composables/useVaultStore'
 import { useDocContent } from '../../src/composables/useDocContent'
 import { useFileSave } from '../../src/composables/useFileSave'
-import { getSettings } from '../../src/storage/settings'
+import { getSettings, saveSettings } from '../../src/storage/settings'
 
 const vault = useVaultStore()
 const docContent = useDocContent()
@@ -13,6 +13,8 @@ const fileSave = useFileSave()
 const propertiesOpen = ref(true)
 const showDropdown = ref(false)
 const ossIncomplete = ref(false)
+const subDir = ref('')
+const imageMode = ref<'local' | 'oss'>('local')
 
 const editableTitle = ref('')
 const editableSource = ref('')
@@ -36,6 +38,8 @@ onMounted(async () => {
   }
 
   const settings = await getSettings()
+  subDir.value = settings.subDir
+  imageMode.value = settings.imageMode
   if (settings.imageMode === 'oss') {
     const cfg = settings.aliyunOSS
     ossIncomplete.value = !cfg.accessKeyId.trim() || !cfg.accessKeySecret.trim() || !cfg.bucket.trim()
@@ -97,6 +101,11 @@ function openSettings() {
 
 function openBookmarks() {
   browser.tabs.create({ url: 'chrome://bookmarks/' })
+}
+
+async function handleSubDirBlur() {
+  const settings = await getSettings()
+  await saveSettings({ ...settings, subDir: subDir.value })
 }
 </script>
 
@@ -188,6 +197,18 @@ function openBookmarks() {
         </template>
 
         <template v-else>
+          <div class="info-row">
+            <span class="info-label">子目录</span>
+            <input
+              v-model="subDir"
+              class="subdir-input"
+              placeholder="Clippings"
+              @blur="handleSubDirBlur"
+            />
+            <span class="image-mode-badge" @click="openSettings">
+              图片: {{ imageMode === 'local' ? '本地' : '阿里云 OSS' }}
+            </span>
+          </div>
           <div class="save-row">
             <button
               class="btn-save"
@@ -453,4 +474,39 @@ function openBookmarks() {
   color: var(--color-text-muted);
   font-size: 14px;
 }
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.info-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.subdir-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  outline: none;
+  padding: 2px 4px;
+  background: transparent;
+}
+.subdir-input:focus { border-bottom-color: var(--color-accent); }
+.image-mode-badge {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 2px;
+}
+.image-mode-badge:hover { color: var(--color-accent); border-color: var(--color-accent); }
 </style>
