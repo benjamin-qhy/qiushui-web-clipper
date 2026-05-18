@@ -262,6 +262,8 @@ async function testAIModel() {
 
       <div class="main-topbar">
         <div></div>
+        <span v-if="saveStatus === 'saved'" class="status-ok">✓ 已保存</span>
+        <span v-else-if="saveStatus === 'error'" class="status-fail">保存失败</span>
         <button class="btn-save" type="button" :disabled="isSaving" @click="save">
           {{ isSaving ? '保存中…' : '保存设置' }}
         </button>
@@ -544,6 +546,7 @@ async function testAIModel() {
   padding: 12px 40px;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border-light);
+  gap: 12px;
 }
 .settings-section {
   padding: 28px 40px;
