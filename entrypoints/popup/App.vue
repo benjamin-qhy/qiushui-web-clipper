@@ -43,10 +43,23 @@ onMounted(async () => {
 })
 
 const doc = computed(() => docContent.doc.value)
-const isFeishuDoc = computed(() => doc.value !== null || docContent.isLoading.value)
+const hasDoc = computed(() => doc.value !== null || docContent.isLoading.value)
+
+const sourceLabel = computed(() => {
+  const source = doc.value?.source ?? ''
+  if (source.includes('feishu.cn')) return '飞书 · 文章'
+  if (source.includes('kdocs.cn')) return '金山文档 · 文章'
+  return '网页 · 文章'
+})
 
 const previewText = computed(() => {
   if (!doc.value) return ''
+  if (doc.value.markdown !== undefined) {
+    return doc.value.markdown
+      .split('\n')
+      .filter(line => line.trim())
+      .join('\n')
+  }
   return doc.value.blocks
     .filter(b => b.spans)
     .map(b => b.spans!.map(s => s.text).join(''))
@@ -83,16 +96,16 @@ function openSettings() {
 }
 
 function openBookmarks() {
-  browser.tabs.create({ url: '/bookmarks.html' })
+  browser.tabs.create({ url: 'chrome://bookmarks/' })
 }
 </script>
 
 <template>
   <div class="popup">
-    <!-- 非飞书文档页 / 提取失败 -->
-    <div v-if="!isFeishuDoc && !docContent.isLoading.value" class="empty-state">
+    <!-- 非支持页 / 提取失败 -->
+    <div v-if="!hasDoc && !docContent.isLoading.value" class="empty-state">
       <p v-if="docContent.error.value" class="error-msg">{{ docContent.error.value }}</p>
-      <p v-else>请在飞书文档页面使用此插件</p>
+      <p v-else>请在网页上使用此插件</p>
     </div>
 
     <!-- 加载中 -->
@@ -104,14 +117,13 @@ function openBookmarks() {
     <template v-else-if="doc">
       <!-- 标题 + 设置入口 -->
       <div class="title-row">
-        <span class="header-brand">Qiushui</span>
+        <span class="header-brand">{{ sourceLabel }}</span>
         <button class="btn-settings" @click="openSettings">设置</button>
-        <button class="btn-bookmarks" @click="openBookmarks">书签</button>
+        <button class="btn-bookmarks" @click="openBookmarks">标签管理</button>
       </div>
 
       <div class="doc-meta">
         <h2 class="doc-title">{{ doc.title }}</h2>
-        <p class="doc-source">飞书 · 文章</p>
       </div>
 
       <!-- 中间可滚动区域 -->

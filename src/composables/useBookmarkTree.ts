@@ -23,6 +23,7 @@ export function useBookmarkTree() {
   const dragOverFolderId = ref<string | null>(null)
   const expandedIds = ref<Set<string>>(new Set())
   const error = ref<string | null>(null)
+  const creatingFolderKeys = new Set<string>()
 
   function buildFolderTree(nodes: BookmarkNode[]): FolderNode[] {
     return nodes
@@ -69,8 +70,23 @@ export function useBookmarkTree() {
   }
 
   async function createFolder(parentId: string, title: string): Promise<void> {
-    await browser.bookmarks.create({ parentId, title })
-    await loadTree().catch(() => {})
+    const normalizedTitle = title.trim()
+    if (!normalizedTitle) return
+
+    const key = `${parentId}\u0000${normalizedTitle}`
+    if (creatingFolderKeys.has(key)) return
+    creatingFolderKeys.add(key)
+
+    try {
+      const siblings = await browser.bookmarks.getChildren(parentId)
+      const existingFolder = siblings.find(n => !n.url && n.title === normalizedTitle)
+      if (!existingFolder) {
+        await browser.bookmarks.create({ parentId, title: normalizedTitle })
+      }
+      await loadTree().catch(() => {})
+    } finally {
+      creatingFolderKeys.delete(key)
+    }
   }
 
   async function renameFolder(id: string, title: string): Promise<void> {
