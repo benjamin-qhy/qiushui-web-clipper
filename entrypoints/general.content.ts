@@ -25,11 +25,6 @@ export default defineContentScript({
           }
           return true
         }
-        if (message.type === 'DOWNLOAD_IMAGE') {
-          // 通用路径不下载图片，直接返回错误（调用方应该不会发这个消息）
-          sendResponse({ ok: false, error: '通用网页路径不支持图片下载' })
-          return true
-        }
       }
     )
   },

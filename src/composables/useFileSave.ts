@@ -28,7 +28,16 @@ export function useFileSave() {
       let body: string
 
       if (doc.markdown !== undefined) {
-        body = doc.markdown
+        const uploader = createUploader(settings)
+        const notename = sanitizeFilename(doc.title)
+        body = await downloadAndReplaceMarkdownImages(
+          doc.markdown,
+          vaultHandle,
+          settings.subDir,
+          notename,
+          uploader,
+          doc.source,
+        )
       } else {
         const uploader = createUploader(settings)
         const notename = sanitizeFilename(doc.title)
@@ -137,5 +146,70 @@ async function downloadAndReplaceImages(
     }
   }
 
+  return result
+}
+
+async function fetchImageAsBase64(url: string, referer?: string): Promise<{ base64: string; mimeType: string }> {
+  const init: RequestInit = referer ? { referrer: referer, referrerPolicy: 'no-referrer-when-downgrade' } : {}
+  const response = await fetch(url, init)
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const blob = await response.blob()
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve((reader.result as string).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+  return { base64, mimeType: blob.type || 'image/png' }
+}
+
+async function downloadAndReplaceMarkdownImages(
+  markdown: string,
+  vaultHandle: FileSystemDirectoryHandle,
+  subDir: string,
+  notename: string,
+  uploader: ImageUploader | null,
+  referer?: string,
+): Promise<string> {
+  const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g
+  let imageIndex = 0
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const replacements: Array<{ original: string; replacement: string }> = []
+  const seen = new Map<string, string>()
+
+  const allMatches = [...markdown.matchAll(imagePattern)]
+
+  for (const match of allMatches) {
+    const [full, alt, url] = match
+    if (seen.has(url)) {
+      replacements.push({ original: full, replacement: `![${alt}](${seen.get(url)})` })
+      continue
+    }
+
+    imageIndex++
+    try {
+      const { base64, mimeType } = await fetchImageAsBase64(url, referer)
+      let newUrl: string
+
+      if (uploader) {
+        newUrl = await uploader.upload({ base64, mimeType, notename, source: 'web' })
+      } else {
+        const ext = mimeToExt(mimeType)
+        const filename = `${notename}-${date}-${imageIndex}.${ext}`
+        await saveImageToVault(vaultHandle, subDir, notename, filename, base64)
+        newUrl = `${notename}.assets/${filename}`
+      }
+
+      seen.set(url, newUrl)
+      replacements.push({ original: full, replacement: `![${alt}](${newUrl})` })
+    } catch {
+      // keep original on error
+    }
+  }
+
+  let result = markdown
+  for (const { original, replacement } of replacements) {
+    result = result.replaceAll(original, replacement)
+  }
   return result
 }
