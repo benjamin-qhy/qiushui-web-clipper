@@ -79,6 +79,11 @@ const ossPathPreview = computed(() => {
   return `${prefixPath}202605/笔记标题-20260509143022583.png`
 })
 
+const sharedImagePathPreview = computed(() => {
+  const dir = settings.value.imageLocalDir.trim() || 'images'
+  return `${dir}/笔记标题-20260518143022583.png`
+})
+
 function resetTestStatus() {
   testStatus.value = 'idle'
   testError.value = ''
@@ -94,6 +99,29 @@ function handleVaultAction() {
     return vault.reauthorize()
   }
   return vault.authorize()
+}
+
+async function chooseImageLocalDir() {
+  dirPickerError.value = ''
+  if (!vault.handle.value || !vault.isAuthorized.value) {
+    dirPickerError.value = '请先完成笔记库授权后再选择目录'
+    return
+  }
+  try {
+    const selected = await window.showDirectoryPicker({
+      mode: 'readwrite',
+      startIn: vault.handle.value,
+    })
+    const relativeParts = await vault.handle.value.resolve(selected)
+    if (relativeParts === null) {
+      dirPickerError.value = '请选择当前笔记库路径内的目录'
+      return
+    }
+    settings.value.imageLocalDir = relativeParts.join('/')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return
+    dirPickerError.value = error instanceof Error ? error.message : String(error)
+  }
 }
 
 async function chooseSubDir(target: 'subDir' | 'bookmarkSubDir') {
@@ -287,8 +315,37 @@ async function testAIModel() {
               @click="settings.imageMode = 'oss'"
             >阿里云 OSS</button>
           </div>
-          <p class="field-hint">本地：图片保存到 .assets 子目录</p>
         </div>
+
+        <template v-if="settings.imageMode === 'local'">
+          <div class="field">
+            <label class="field-label">图片保存位置</label>
+            <div class="mode-group">
+              <button
+                class="mode-btn"
+                :class="{ active: settings.imageLocalMode === 'per-note' }"
+                type="button"
+                @click="settings.imageLocalMode = 'per-note'"
+              >按笔记</button>
+              <button
+                class="mode-btn"
+                :class="{ active: settings.imageLocalMode === 'shared' }"
+                type="button"
+                @click="settings.imageLocalMode = 'shared'"
+              >统一目录</button>
+            </div>
+            <p v-if="settings.imageLocalMode === 'per-note'" class="field-hint">
+              图片保存到 {笔记名}.assets/ 子目录
+            </p>
+            <template v-if="settings.imageLocalMode === 'shared'">
+              <div class="input-action-row" style="margin-top: 8px">
+                <input v-model="settings.imageLocalDir" class="field-input" placeholder="images" />
+                <button class="btn-secondary" type="button" @click="chooseImageLocalDir">选择目录</button>
+              </div>
+              <p class="field-hint preview-path">{{ sharedImagePathPreview }}</p>
+            </template>
+          </div>
+        </template>
 
         <template v-if="settings.imageMode === 'oss'">
           <div class="field">
