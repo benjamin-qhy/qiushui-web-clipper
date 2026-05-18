@@ -18,6 +18,8 @@ export interface AIConfig {
 export interface Settings {
   subDir: string
   imageMode: 'local' | 'oss'
+  imageLocalMode: 'per-note' | 'shared'
+  imageLocalDir: string
   ossProvider: 'aliyun'
   aliyunOSS: AliyunOSSConfig
   aiConfig: AIConfig
@@ -30,6 +32,8 @@ const STORAGE_KEY = 'feishu-clipper-settings'
 export const DEFAULT_SETTINGS: Settings = {
   subDir: 'Clippings',
   imageMode: 'local',
+  imageLocalMode: 'per-note',
+  imageLocalDir: 'images',
   ossProvider: 'aliyun',
   aliyunOSS: {
     accessKeyId: '',
