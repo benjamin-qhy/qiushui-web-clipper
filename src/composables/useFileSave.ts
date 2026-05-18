@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { browser } from 'wxt/browser'
-import { saveToVault, saveImageToVault } from '../filesystem/save'
+import { saveToVault, saveImageToVault, saveImageToSharedDir, saveToDir } from '../filesystem/save'
+import { computeSharedImagePath } from '../filesystem/paths'
 import { buildFrontmatter } from '../converter/frontmatter'
 import { blocksToMarkdown } from '../converter/blocks'
 import { sanitizeFilename } from '../converter/filename'
@@ -17,6 +18,7 @@ export function useFileSave() {
   async function save(
     vaultHandle: FileSystemDirectoryHandle,
     doc: DocContent,
+    overrideDirHandle?: FileSystemDirectoryHandle,
   ) {
     isSaving.value = true
     error.value = null
@@ -25,6 +27,7 @@ export function useFileSave() {
     try {
       const settings = await getSettings()
       const frontmatter = buildFrontmatter(doc)
+      const effectiveSubDir = overrideDirHandle ? '' : settings.subDir
       let body: string
 
       if (doc.markdown !== undefined) {
@@ -33,10 +36,12 @@ export function useFileSave() {
         body = await downloadAndReplaceMarkdownImages(
           doc.markdown,
           vaultHandle,
-          settings.subDir,
+          effectiveSubDir,
           notename,
           uploader,
           doc.source,
+          settings.imageLocalMode,
+          settings.imageLocalDir,
         )
       } else {
         const uploader = createUploader(settings)
@@ -48,17 +53,20 @@ export function useFileSave() {
                 doc.blocks,
                 tab.id,
                 vaultHandle,
-                settings.subDir,
+                effectiveSubDir,
                 notename,
                 uploader,
+                settings.imageLocalMode,
+                settings.imageLocalDir,
               )
             : doc.blocks
         body = blocksToMarkdown(blocks)
       }
 
       const content = `${frontmatter}\n${body}\n`
-
-      const filename = await saveToVault(vaultHandle, settings.subDir, doc.title, content)
+      const filename = overrideDirHandle
+        ? await saveToDir(overrideDirHandle, doc.title, content)
+        : await saveToVault(vaultHandle, settings.subDir, doc.title, content)
       savedFilename.value = filename
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -93,6 +101,8 @@ async function downloadAndReplaceImages(
   subDir: string,
   notename: string,
   uploader: ImageUploader | null,
+  imageLocalMode: 'per-note' | 'shared' = 'per-note',
+  imageLocalDir: string = 'images',
 ): Promise<Block[]> {
   let imageIndex = 0
   const result: Block[] = []
@@ -138,8 +148,13 @@ async function downloadAndReplaceImages(
       } else {
         const ext = mimeToExt(mimeType)
         const filename = `${notename}-${date}-${imageIndex}.${ext}`
-        await saveImageToVault(vaultHandle, subDir, notename, filename, base64)
-        result.push({ ...block, src: `${notename}.assets/${filename}` })
+        if (imageLocalMode === 'shared') {
+          await saveImageToSharedDir(vaultHandle, imageLocalDir, filename, base64)
+          result.push({ ...block, src: computeSharedImagePath(subDir, imageLocalDir, filename) })
+        } else {
+          await saveImageToVault(vaultHandle, subDir, notename, filename, base64)
+          result.push({ ...block, src: `${notename}.assets/${filename}` })
+        }
       }
     } catch {
       result.push(block)
@@ -170,6 +185,8 @@ async function downloadAndReplaceMarkdownImages(
   notename: string,
   uploader: ImageUploader | null,
   referer?: string,
+  imageLocalMode: 'per-note' | 'shared' = 'per-note',
+  imageLocalDir: string = 'images',
 ): Promise<string> {
   const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g
   let imageIndex = 0
@@ -196,8 +213,13 @@ async function downloadAndReplaceMarkdownImages(
       } else {
         const ext = mimeToExt(mimeType)
         const filename = `${notename}-${date}-${imageIndex}.${ext}`
-        await saveImageToVault(vaultHandle, subDir, notename, filename, base64)
-        newUrl = `${notename}.assets/${filename}`
+        if (imageLocalMode === 'shared') {
+          await saveImageToSharedDir(vaultHandle, imageLocalDir, filename, base64)
+          newUrl = computeSharedImagePath(subDir, imageLocalDir, filename)
+        } else {
+          await saveImageToVault(vaultHandle, subDir, notename, filename, base64)
+          newUrl = `${notename}.assets/${filename}`
+        }
       }
 
       seen.set(url, newUrl)
