@@ -115,6 +115,7 @@ async function handleSaveAs() {
     showDropdown.value = false
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') return
+    showDropdown.value = false
     saveAsError.value = e instanceof Error ? e.message : String(e)
   }
 }

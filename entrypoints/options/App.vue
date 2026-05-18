@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useSettings } from '../../src/composables/useSettings'
 import { useVaultStore } from '../../src/composables/useVaultStore'
+import { computeSharedImagePath } from '../../src/filesystem/paths'
 
 const { settings, isSaving, saveStatus, load, save } = useSettings()
 const vault = useVaultStore()
@@ -81,7 +82,7 @@ const ossPathPreview = computed(() => {
 
 const sharedImagePathPreview = computed(() => {
   const dir = settings.value.imageLocalDir.trim() || 'images'
-  return `${dir}/笔记标题-20260518143022583.png`
+  return computeSharedImagePath(settings.value.subDir, dir, '笔记标题-20260518143022583.png')
 })
 
 function resetTestStatus() {
