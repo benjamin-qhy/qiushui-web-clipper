@@ -96,7 +96,7 @@ function openSettings() {
 }
 
 function openBookmarks() {
-  browser.tabs.create({ url: '/bookmarks.html' })
+  browser.tabs.create({ url: 'chrome://bookmarks/' })
 }
 </script>
 
@@ -117,14 +117,13 @@ function openBookmarks() {
     <template v-else-if="doc">
       <!-- 标题 + 设置入口 -->
       <div class="title-row">
-        <span class="header-brand">Qiushui</span>
+        <span class="header-brand">{{ sourceLabel }}</span>
         <button class="btn-settings" @click="openSettings">设置</button>
-        <button class="btn-bookmarks" @click="openBookmarks">书签</button>
+        <button class="btn-bookmarks" @click="openBookmarks">标签管理</button>
       </div>
 
       <div class="doc-meta">
         <h2 class="doc-title">{{ doc.title }}</h2>
-        <p class="doc-source">{{ sourceLabel }}</p>
       </div>
 
       <!-- 中间可滚动区域 -->

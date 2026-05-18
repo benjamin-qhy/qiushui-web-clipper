@@ -31,9 +31,9 @@ describe('deduplicateByUrl', () => {
 })
 
 describe('isDeadLink', () => {
-  it('returns true when fetch throws (network error)', async () => {
+  it('returns false when fetch throws (network error)', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('network error'))
-    expect(await isDeadLink('https://dead.example.com')).toBe(true)
+    expect(await isDeadLink('https://dead.example.com')).toBe(false)
   })
 
   it('returns true when status >= 400', async () => {

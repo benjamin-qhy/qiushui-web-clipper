@@ -42,7 +42,6 @@ function setError(e: unknown) {
   <div class="layout">
     <div class="pane-left">
       <div class="pane-header">
-        <div class="pane-brand">Qiushui</div>
         <div class="pane-title">书签</div>
       </div>
       <div class="pane-body">

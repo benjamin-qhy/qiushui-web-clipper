@@ -12,6 +12,7 @@ const testStatus = ref<'idle' | 'testing' | 'ok' | 'fail'>('idle')
 const testError = ref('')
 const aiTestStatus = ref<'idle' | 'testing' | 'ok' | 'fail'>('idle')
 const aiTestError = ref('')
+const dirPickerError = ref('')
 
 const ossRegions = [
   { value: 'oss-cn-hangzhou', label: '华东1（杭州）' },
@@ -25,7 +26,7 @@ const ossRegions = [
 const version = '2.0.0'
 const mainEl = ref<HTMLElement | null>(null)
 const activeSection = ref('vault')
-const sectionIds = ['vault', 'images', 'ai', 'org']
+const sectionIds = ['vault', 'images', 'org']
 
 let observer: IntersectionObserver | null = null
 
@@ -93,6 +94,33 @@ function handleVaultAction() {
     return vault.reauthorize()
   }
   return vault.authorize()
+}
+
+async function chooseSubDir(target: 'subDir' | 'bookmarkSubDir') {
+  dirPickerError.value = ''
+
+  if (!vault.handle.value || !vault.isAuthorized.value) {
+    dirPickerError.value = '请先完成笔记库授权后再选择子目录'
+    return
+  }
+
+  try {
+    const selected = await window.showDirectoryPicker({
+      mode: 'readwrite',
+      startIn: vault.handle.value,
+    })
+    const relativeParts = await vault.handle.value.resolve(selected)
+    if (relativeParts === null) {
+      dirPickerError.value = '请选择当前笔记库路径内的目录'
+      return
+    }
+    settings.value[target] = relativeParts.join('/')
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return
+    }
+    dirPickerError.value = error instanceof Error ? error.message : String(error)
+  }
 }
 
 watch(
@@ -189,14 +217,12 @@ async function testAIModel() {
     <!-- Left nav -->
     <nav class="settings-nav">
       <div class="nav-header">
-        <div class="nav-brand">Qiushui Clipper</div>
         <div class="nav-title">设置</div>
       </div>
       <div class="nav-body">
         <div class="nav-group-label">通用</div>
         <a class="nav-item" :class="{ active: activeSection === 'vault' }" href="#section-vault" @click.prevent="scrollTo('vault')">笔记库</a>
         <a class="nav-item" :class="{ active: activeSection === 'images' }" href="#section-images" @click.prevent="scrollTo('images')">图片</a>
-        <a class="nav-item" :class="{ active: activeSection === 'ai' }" href="#section-ai" @click.prevent="scrollTo('ai')">AI 模型</a>
         <div class="nav-group-label">书签</div>
         <a class="nav-item" :class="{ active: activeSection === 'org' }" href="#section-org" @click.prevent="scrollTo('org')">整理</a>
       </div>
@@ -228,9 +254,13 @@ async function testAIModel() {
         </div>
         <div class="field">
           <label class="field-label" for="sub-dir">子目录</label>
-          <input id="sub-dir" v-model="settings.subDir" class="field-input" placeholder="Clippings" />
+          <div class="input-action-row">
+            <input id="sub-dir" v-model="settings.subDir" class="field-input" placeholder="Clippings" />
+            <button class="btn-secondary" type="button" @click="chooseSubDir('subDir')">选择目录</button>
+          </div>
           <p class="field-hint">笔记会保存到笔记库下的此子目录，留空则保存到根目录。</p>
         </div>
+        <p v-if="dirPickerError" class="status-fail field-inline-error">{{ dirPickerError }}</p>
       </section>
 
       <div class="section-divider"></div>
@@ -303,39 +333,6 @@ async function testAIModel() {
 
       <div class="section-divider"></div>
 
-      <!-- AI Model -->
-      <section id="section-ai" class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">AI 模型</h2>
-          <p class="section-desc">AI 模型配置</p>
-        </div>
-        <div class="field">
-          <label class="field-label" for="ai-base-url">接口地址</label>
-          <input id="ai-base-url" v-model="settings.aiConfig.baseUrl" class="field-input" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
-          <p class="field-hint">支持任意 OpenAI 兼容接口</p>
-        </div>
-        <div class="field">
-          <label class="field-label" for="ai-api-key">密钥</label>
-          <div class="secret-row">
-            <input id="ai-api-key" v-model="settings.aiConfig.apiKey" :type="showAISecret ? 'text' : 'password'" class="field-input" autocomplete="off" />
-            <button class="btn-secondary" type="button" @click="showAISecret = !showAISecret">{{ showAISecret ? '隐藏' : '显示' }}</button>
-          </div>
-        </div>
-        <div class="field">
-          <label class="field-label" for="ai-model">模型名称</label>
-          <input id="ai-model" v-model="settings.aiConfig.model" class="field-input" placeholder="qwen-long" />
-        </div>
-        <div class="field test-row">
-          <button class="btn-secondary" type="button" :disabled="aiTestStatus === 'testing'" @click="testAIModel">
-            {{ aiTestStatus === 'testing' ? '测试中…' : '测试模型' }}
-          </button>
-          <span v-if="aiTestStatus === 'ok'" class="status-ok">✓ 模型可用</span>
-          <span v-else-if="aiTestStatus === 'fail'" class="status-fail">✗ {{ aiTestError }}</span>
-        </div>
-      </section>
-
-      <div class="section-divider"></div>
-
       <!-- Organization -->
       <section id="section-org" class="settings-section">
         <div class="section-header">
@@ -349,9 +346,36 @@ async function testAIModel() {
         </div>
         <div class="field">
           <label class="field-label" for="bookmark-sub-dir">Obsidian 子目录</label>
-          <input id="bookmark-sub-dir" v-model="settings.bookmarkSubDir" class="field-input" placeholder="Bookmarks" />
+          <div class="input-action-row">
+            <input id="bookmark-sub-dir" v-model="settings.bookmarkSubDir" class="field-input" placeholder="Bookmarks" />
+            <button class="btn-secondary" type="button" @click="chooseSubDir('bookmarkSubDir')">选择目录</button>
+          </div>
           <p class="field-hint">整理后的书签笔记将保存到笔记库下的此子目录中。</p>
         </div>
+        <div class="field">
+          <label class="field-label" for="ai-base-url">AI 接口地址</label>
+          <input id="ai-base-url" v-model="settings.aiConfig.baseUrl" class="field-input" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" />
+          <p class="field-hint">支持任意 OpenAI 兼容接口</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="ai-api-key">AI 密钥</label>
+          <div class="secret-row">
+            <input id="ai-api-key" v-model="settings.aiConfig.apiKey" :type="showAISecret ? 'text' : 'password'" class="field-input" autocomplete="off" />
+            <button class="btn-secondary" type="button" @click="showAISecret = !showAISecret">{{ showAISecret ? '隐藏' : '显示' }}</button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="ai-model">AI 模型名称</label>
+          <input id="ai-model" v-model="settings.aiConfig.model" class="field-input" placeholder="qwen-long" />
+        </div>
+        <div class="field test-row">
+          <button class="btn-secondary" type="button" :disabled="aiTestStatus === 'testing'" @click="testAIModel">
+            {{ aiTestStatus === 'testing' ? '测试中…' : '测试模型' }}
+          </button>
+          <span v-if="aiTestStatus === 'ok'" class="status-ok">✓ 模型可用</span>
+          <span v-else-if="aiTestStatus === 'fail'" class="status-fail">✗ {{ aiTestError }}</span>
+        </div>
+        <p v-if="dirPickerError" class="status-fail field-inline-error">{{ dirPickerError }}</p>
       </section>
 
       <div class="section-divider"></div>
@@ -486,6 +510,14 @@ async function testAIModel() {
 }
 .field { margin-bottom: 18px; max-width: 520px; }
 .field:last-child { margin-bottom: 0; }
+.input-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.input-action-row .field-input {
+  flex: 1;
+}
 .field-label {
   display: block;
   font-size: 14px;
@@ -583,6 +615,10 @@ async function testAIModel() {
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 .status-ok { color: #2e7d32; font-size: 14px; }
 .status-fail { color: #c62828; font-size: 14px; word-break: break-word; }
+.field-inline-error {
+  margin: -8px 0 18px;
+  max-width: 520px;
+}
 .bottom-save {
   display: flex;
   align-items: center;

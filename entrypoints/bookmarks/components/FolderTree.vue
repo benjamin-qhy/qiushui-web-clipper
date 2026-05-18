@@ -33,10 +33,15 @@ function startCreate(parentId: string) {
 }
 
 function confirmCreate(parentId: string) {
-  if (newFolderTitle.value.trim()) {
-    emit('createFolder', parentId, newFolderTitle.value.trim())
-  }
+  if (creatingIn.value !== parentId) return
+
+  const title = newFolderTitle.value.trim()
   creatingIn.value = null
+  newFolderTitle.value = ''
+
+  if (title) {
+    emit('createFolder', parentId, title)
+  }
 }
 
 function startRename(node: FolderNode) {
@@ -45,10 +50,15 @@ function startRename(node: FolderNode) {
 }
 
 function confirmRename(id: string) {
-  if (editingTitle.value.trim()) {
-    emit('renameFolder', id, editingTitle.value.trim())
-  }
+  if (editingId.value !== id) return
+
+  const title = editingTitle.value.trim()
   editingId.value = null
+  editingTitle.value = ''
+
+  if (title) {
+    emit('renameFolder', id, title)
+  }
 }
 
 function onDragOver(e: DragEvent, folderId: string) {
@@ -181,6 +191,11 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
 }
 .folder-row.selected .folder-name { color: #fff; }
 .folder-row.selected .expand-btn { color: rgba(255,255,255,0.6); }
+.folder-row.selected .inline-input {
+  background: #fff;
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
 .folder-row.drag-over {
   background: #fff3e0;
   outline: 1px solid var(--color-accent);
@@ -227,12 +242,13 @@ function onFolderDragStart(e: DragEvent, folderId: string) {
 .inline-input {
   flex: 1;
   font-size: 14px;
-  border: none;
-  border-bottom: 1px solid var(--color-accent);
+  border: 1px solid var(--color-accent);
   padding: 1px 4px;
   outline: none;
-  background: transparent;
+  background: #fff;
   font-family: var(--font-ui);
   color: var(--color-text);
+  border-radius: 2px;
+  min-width: 0;
 }
 </style>
