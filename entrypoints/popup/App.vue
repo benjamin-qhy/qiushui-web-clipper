@@ -12,6 +12,8 @@ const fileSave = useFileSave()
 
 const propertiesOpen = ref(true)
 const showDropdown = ref(false)
+const copyDone = ref(false)
+const saveAsError = ref<string | null>(null)
 const ossIncomplete = ref(false)
 const subDir = ref('')
 const imageMode = ref<'local' | 'oss'>('local')
@@ -92,7 +94,29 @@ async function handleSave() {
 async function handleCopy() {
   if (!doc.value) return
   await fileSave.copyToClipboard(mergedDoc())
-  showDropdown.value = false
+  copyDone.value = true
+  setTimeout(() => { copyDone.value = false }, 2000)
+}
+
+async function handleSaveAs() {
+  if (!vault.handle.value || !doc.value) return
+  saveAsError.value = null
+  try {
+    const selected = await window.showDirectoryPicker({
+      mode: 'readwrite',
+      startIn: vault.handle.value,
+    })
+    const relativeParts = await vault.handle.value.resolve(selected)
+    if (relativeParts === null) {
+      saveAsError.value = '请选择当前笔记库路径内的目录'
+      return
+    }
+    await fileSave.save(vault.handle.value, mergedDoc(), selected)
+    showDropdown.value = false
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return
+    saveAsError.value = e instanceof Error ? e.message : String(e)
+  }
 }
 
 function openSettings() {
@@ -219,8 +243,8 @@ async function handleSubDirBlur() {
             </button>
             <button class="btn-dropdown" @click="showDropdown = !showDropdown">▼</button>
             <div v-if="showDropdown" class="dropdown">
-              <button @click="handleCopy">复制 Markdown</button>
-              <button @click="vault.changeVault()">更换 Vault 目录</button>
+              <button @click="handleCopy">{{ copyDone ? '✓ 已复制' : '复制 Markdown' }}</button>
+              <button @click="handleSaveAs">另存为</button>
             </div>
           </div>
         </template>
@@ -230,6 +254,7 @@ async function handleSubDirBlur() {
           ✓ 已保存：{{ fileSave.savedFilename.value }}
         </p>
         <p v-if="fileSave.error.value" class="error-msg">{{ fileSave.error.value }}</p>
+        <p v-if="saveAsError" class="error-msg">{{ saveAsError }}</p>
       </div>
     </template>
   </div>
