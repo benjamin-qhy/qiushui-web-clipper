@@ -57,3 +57,42 @@ export async function getDir(
     throw new Error(`无法创建目录 "${name}": ${e}`)
   })
 }
+
+export async function saveImageToSharedDir(
+  vaultHandle: FileSystemDirectoryHandle,
+  imageLocalDir: string,
+  filename: string,
+  base64: string,
+): Promise<void> {
+  const dir = imageLocalDir.trim() || 'images'
+  const dirHandle = await getDir(vaultHandle, dir)
+  const safeFilename = filename.replace(/^\.+/, '') || 'image.png'
+  const fileHandle = await dirHandle.getFileHandle(safeFilename, { create: true })
+  const writable = await fileHandle.createWritable()
+  const binary = atob(base64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  await writable.write(bytes)
+  await writable.close()
+}
+
+export async function saveToDir(
+  dirHandle: FileSystemDirectoryHandle,
+  title: string,
+  content: string,
+): Promise<string> {
+  const existing = new Set<string>()
+  for await (const name of dirHandle.keys()) {
+    if (name.endsWith('.md')) existing.add(name.slice(0, -3))
+  }
+  const base = sanitizeFilename(title)
+  const finalName = resolveFilename(base, existing)
+  const filename = `${finalName}.md`
+  const fileHandle = await dirHandle.getFileHandle(filename, { create: true }).catch(e => {
+    throw new Error(`无法创建文件 "${filename}": ${e}`)
+  })
+  const writable = await fileHandle.createWritable()
+  await writable.write(content)
+  await writable.close()
+  return filename
+}
