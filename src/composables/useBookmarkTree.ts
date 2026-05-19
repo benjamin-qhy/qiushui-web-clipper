@@ -7,6 +7,9 @@ import { getAllBookmarkRecords } from '../storage/bookmarks'
 import type { BookmarkRecord } from '../storage/bookmarks'
 
 export type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
+export interface BookmarkListItem extends BookmarkNode {
+  folderPath: string
+}
 
 export interface FolderNode {
   id: string
@@ -25,7 +28,7 @@ export interface SelectedFolderStats {
 export function useBookmarkTree() {
   const folderTree = ref<FolderNode[]>([])
   const selectedFolderId = ref<string | null>(null)
-  const selectedBookmarks = ref<BookmarkNode[]>([])
+  const selectedBookmarks = ref<BookmarkListItem[]>([])
   const selectedFolderStats = ref<SelectedFolderStats>({
     directBookmarkCount: 0,
     recursiveBookmarkCount: 0,
@@ -37,6 +40,34 @@ export function useBookmarkTree() {
   const expandedIds = ref<Set<string>>(new Set())
   const error = ref<string | null>(null)
   const creatingFolderKeys = new Set<string>()
+  const folderPathById = ref<Map<string, string>>(new Map())
+
+  function buildFolderPathById(nodes: BookmarkNode[], ancestors: string[] = []): Map<string, string> {
+    const map = new Map<string, string>()
+    const ignoredTitles = new Set(['书签栏', 'Bookmarks Bar'])
+
+    function visit(node: BookmarkNode, parentTitles: string[]) {
+      if (node.url) return
+
+      const nextTitles = ignoredTitles.has(node.title)
+        ? parentTitles
+        : node.title
+          ? [...parentTitles, node.title]
+          : parentTitles
+
+      map.set(node.id, nextTitles.join('/'))
+
+      for (const child of node.children ?? []) {
+        visit(child, nextTitles)
+      }
+    }
+
+    for (const node of nodes) {
+      visit(node, ancestors)
+    }
+
+    return map
+  }
 
   function buildFolderTree(nodes: BookmarkNode[]): FolderNode[] {
     return nodes
@@ -56,6 +87,7 @@ export function useBookmarkTree() {
       if (roots.length === 0) return
       // roots[0] is the invisible root; its children are Bookmarks Bar, Other Bookmarks, etc.
       folderTree.value = buildFolderTree(roots[0].children ?? [])
+      folderPathById.value = buildFolderPathById(roots[0].children ?? [])
 
       const records = await getAllBookmarkRecords()
       processedIds.value = new Set(records.map(r => r.id))
@@ -70,11 +102,16 @@ export function useBookmarkTree() {
     selectedFolderId.value = folderId
     const subtree = await browser.bookmarks.getSubTree(folderId)
     const rootChildren = subtree[0]?.children ?? []
-    const bookmarks: BookmarkNode[] = []
+    const bookmarks: BookmarkListItem[] = []
 
     function collectBookmarks(nodes: BookmarkNode[]) {
       for (const node of nodes) {
-        if (node.url) bookmarks.push(node)
+        if (node.url) {
+          bookmarks.push({
+            ...node,
+            folderPath: folderPathById.value.get(node.parentId ?? '') ?? '',
+          })
+        }
         if (node.children) collectBookmarks(node.children)
       }
     }

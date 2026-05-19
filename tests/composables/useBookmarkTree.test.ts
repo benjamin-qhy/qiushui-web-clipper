@@ -37,6 +37,30 @@ beforeEach(() => {
 
 describe('useBookmarkTree.selectFolder', () => {
   it('selects bookmarks from the full folder subtree', async () => {
+    bookmarksGetTree.mockResolvedValue([
+      {
+        id: '0',
+        title: '',
+        children: [
+          {
+            id: '1',
+            title: '书签栏',
+            children: [
+              { id: '2', parentId: '1', title: 'Root bookmark', url: 'https://root.example' },
+              {
+                id: '3',
+                parentId: '1',
+                title: '工具',
+                children: [
+                  { id: '4', parentId: '3', title: 'Nested bookmark', url: 'https://nested.example' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ])
+
     bookmarksGetSubTree.mockResolvedValue([
       {
         id: '1',
@@ -56,9 +80,11 @@ describe('useBookmarkTree.selectFolder', () => {
     ])
 
     const tree = useBookmarkTree()
+    await tree.loadTree()
     await tree.selectFolder('1')
 
     expect(tree.selectedBookmarks.value.map(b => b.id)).toEqual(['2', '4'])
+    expect(tree.selectedBookmarks.value.map(b => b.folderPath)).toEqual(['', '工具'])
     expect(tree.selectedFolderStats.value).toEqual({
       directBookmarkCount: 1,
       recursiveBookmarkCount: 2,

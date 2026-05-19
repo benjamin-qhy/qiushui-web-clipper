@@ -125,7 +125,7 @@ function openSettings() {
 }
 
 function openBookmarks() {
-  browser.tabs.create({ url: 'chrome://bookmarks/' })
+  browser.tabs.create({ url: browser.runtime.getURL('/bookmarks.html') })
 }
 
 async function handleSubDirBlur() {

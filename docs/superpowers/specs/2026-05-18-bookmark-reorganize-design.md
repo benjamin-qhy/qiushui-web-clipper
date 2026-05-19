@@ -66,7 +66,7 @@ async function fetchPageMeta(url: string): Promise<PageMeta>
 
 流程：`browser.tabs.create({ url, active: false })` → 监听 `tabs.onUpdated` 等待 `status === 'complete'` → `browser.scripting.executeScript` 读取 `document.title`、`meta[name=keywords]`、`meta[name=description]` → `browser.tabs.remove(tabId)`。
 
-超时（10 秒）或失败时抛出异常，由调用方用书签原始 title + url 兜底。
+超时（30 秒）或失败时抛出异常，由调用方用书签原始 title + url 兜底。
 
 ---
 

@@ -43,7 +43,7 @@ function waitForTabComplete(tabId: number, timeoutMs: number): Promise<void> {
   })
 }
 
-export async function fetchPageMeta(url: string, timeoutMs = 10000): Promise<PageMeta> {
+export async function fetchPageMeta(url: string, timeoutMs = 30000): Promise<PageMeta> {
   const tab = await browser.tabs.create({ url, active: false })
   if (tab.id === undefined) {
     throw new Error('无法获取标签页 ID')

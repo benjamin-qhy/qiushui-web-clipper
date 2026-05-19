@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { BookmarkNode, SelectedFolderStats } from '../../../src/composables/useBookmarkTree'
+import type { BookmarkListItem, SelectedFolderStats } from '../../../src/composables/useBookmarkTree'
 import type { BookmarkRecord } from '../../../src/storage/bookmarks'
 
 const props = defineProps<{
-  bookmarks: BookmarkNode[]
+  bookmarks: BookmarkListItem[]
   processedIds: Set<string>
   records?: Map<string, BookmarkRecord>
   folderTitle: string
@@ -69,13 +69,14 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
         <div class="bm-content" @click="bm.url && emit('openBookmark', bm.url)">
           <span class="bm-title">{{ bm.title || bm.url }}</span>
           <span class="bm-url">{{ bm.url }}</span>
-          <span v-if="props.records?.get(bm.id)?.category" class="bm-category">
-            {{ props.records?.get(bm.id)?.category }}
-          </span>
           <span v-if="props.records?.get(bm.id)?.summary" class="bm-summary">
             {{ props.records?.get(bm.id)?.summary }}
           </span>
-          <span v-if="props.records?.get(bm.id)?.tags?.length" class="bm-tags">
+          <span
+            v-if="bm.folderPath || props.records?.get(bm.id)?.tags?.length"
+            class="bm-tags"
+          >
+            <span v-if="bm.folderPath" class="bm-tag bm-folder-path">{{ bm.folderPath }}</span>
             <span v-for="tag in props.records?.get(bm.id)?.tags" :key="tag" class="bm-tag">{{ tag }}</span>
           </span>
         </div>
@@ -153,13 +154,6 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   margin-top: 1px;
 }
 .bm-content:hover .bm-title { color: var(--color-accent); }
-.bm-category {
-  display: block;
-  font-size: 12px;
-  color: var(--color-accent);
-  margin-top: 2px;
-  font-weight: 500;
-}
 .bm-summary {
   display: block;
   font-size: 12px;
@@ -183,6 +177,9 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   background: var(--color-border-light);
   color: var(--color-text-secondary);
   border-radius: 2px;
+}
+.bm-folder-path {
+  color: var(--color-text-secondary);
 }
 .badge-processed {
   flex-shrink: 0;
