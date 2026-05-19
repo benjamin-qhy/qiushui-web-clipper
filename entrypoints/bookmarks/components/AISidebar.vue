@@ -4,9 +4,9 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { browser } from 'wxt/browser'
 import { useBookmarkProcess } from '../../../src/composables/useBookmarkProcess'
 import { useVaultStore } from '../../../src/composables/useVaultStore'
-import { getAllBookmarkRecords } from '../../../src/storage/bookmarks'
+import { getAllBookmarkRecords, type BookmarkRecord } from '../../../src/storage/bookmarks'
 import { getSettings } from '../../../src/storage/settings'
-import { exportCategoriesToVault } from '../../../src/bookmark/export'
+import { exportBookmarksToVault } from '../../../src/bookmark/export'
 
 const processor = useBookmarkProcess()
 const vault = useVaultStore()
@@ -30,8 +30,9 @@ async function handleExport() {
     }
     if (!vault.handle.value) throw new Error('未选择 Obsidian vault')
     const settings = await getSettings()
-    const records = await getAllBookmarkRecords()
-    await exportCategoriesToVault(vault.handle.value, settings.bookmarkSubDir, records)
+    const recordList = await getAllBookmarkRecords()
+    const records = new Map<string, BookmarkRecord>(recordList.map(r => [r.id, r]))
+    await exportBookmarksToVault(vault.handle.value, settings.bookmarkSubDir, records)
     exportState.value = 'done'
     setTimeout(() => { exportState.value = 'idle' }, 3000)
   } catch (e) {

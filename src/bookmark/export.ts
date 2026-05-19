@@ -1,68 +1,65 @@
+import { browser } from 'wxt/browser'
+import type { Browser } from 'wxt/browser'
 import type { BookmarkRecord } from '../storage/bookmarks'
-import { getDir } from '../filesystem/save'
+import { getDirPath } from '../filesystem/save'
+import { getFolderDescriptions } from '../storage/folderDescriptions'
+import { getSettings } from '../storage/settings'
 
-export function buildBookmarkEntry(record: BookmarkRecord): string {
-  const tagsLine = record.tags.length > 0 ? record.tags.map(t => `#${t}`).join(' ') : ''
-  const tagsSection = tagsLine ? `\n**标签:** ${tagsLine}` : ''
-  return `## [${record.title}](${record.url})\n> ${record.summary}${tagsSection}\n\n---\n\n`
-}
+type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
-export function buildCategoryFrontmatter(category: string, date: string): string {
-  return `---\ntags: [bookmarks, ${category}]\nupdated: ${date}\n---\n\n# ${category}\n\n`
-}
-
-export function extractExistingUrls(content: string): Set<string> {
-  const pattern = /## \[.*?\]\((https?:\/\/[^)]+)\)/g
-  const urls = new Set<string>()
-  let match: RegExpExecArray | null
-  while ((match = pattern.exec(content)) !== null) {
-    urls.add(match[1])
+function collectUrls(node: BookmarkNode): BookmarkNode[] {
+  if (node.url) return [node]
+  const results: BookmarkNode[] = []
+  for (const child of node.children ?? []) {
+    results.push(...collectUrls(child))
   }
-  return urls
+  return results
 }
 
-export async function exportCategoriesToVault(
+function buildEntry(bm: BookmarkNode, record?: BookmarkRecord): string {
+  const title = record?.title || bm.title || bm.url || ''
+  const url = bm.url!
+  const summary = record?.summary ? `\n${record.summary}` : ''
+  const tagsLine = record?.tags?.length ? `\n${record.tags.map(t => `#${t}`).join(' ')}` : ''
+  return `## [${title}](${url})${summary}${tagsLine}\n\n`
+}
+
+function buildFrontmatter(title: string, description: string, date: string): string {
+  const descLine = description ? `\ndescription: "${description.replace(/"/g, '\\"')}"` : ''
+  return `---\ntitle: "${title}"${descLine}\ntags: [bookmarks]\nupdated: ${date}\n---\n\n`
+}
+
+export async function exportBookmarksToVault(
   vaultHandle: FileSystemDirectoryHandle,
   subDir: string,
-  records: BookmarkRecord[],
+  records: Map<string, BookmarkRecord>,
 ): Promise<void> {
-  const dir = subDir.trim() || 'Bookmarks'
-  const dirHandle = await getDir(vaultHandle, dir)
+  const dirHandle = await getDirPath(vaultHandle, subDir, 'Bookmarks')
+  const [descriptions, settings] = await Promise.all([getFolderDescriptions(), getSettings()])
+  const inboxName = settings.bookmarkInboxFolder
   const date = new Date().toISOString().slice(0, 10)
 
-  const byCategory = new Map<string, BookmarkRecord[]>()
-  for (const r of records) {
-    const list = byCategory.get(r.category) ?? []
-    list.push(r)
-    byCategory.set(r.category, list)
-  }
+  const roots = await browser.bookmarks.getTree()
+  const bar = roots[0]?.children?.find(n => !n.url) ?? roots[0]?.children?.[0]
+  if (!bar) return
 
-  for (const [category, catRecords] of byCategory) {
-    const filename = `${category}.md`
-    let existingContent = ''
-    let fileHandle: FileSystemFileHandle
+  for (const folder of bar.children ?? []) {
+    if (folder.url) continue
+    if (folder.title === inboxName) continue
 
-    try {
-      fileHandle = await dirHandle.getFileHandle(filename)
-      existingContent = await (await fileHandle.getFile()).text()
-    } catch {
-      fileHandle = await dirHandle.getFileHandle(filename, { create: true })
-    }
+    const title = folder.title
+    const description = descriptions[folder.id] ?? ''
+    const allBookmarks = collectUrls(folder)
 
-    const existingUrls = extractExistingUrls(existingContent)
-    const newEntries = catRecords
-      .filter(r => !existingUrls.has(r.url))
-      .map(r => buildBookmarkEntry(r))
-      .join('')
+    if (allBookmarks.length === 0) continue
 
-    if (!newEntries) continue
+    const entries = allBookmarks.map(bm => buildEntry(bm, records.get(bm.id))).join('')
+    const content = buildFrontmatter(title, description, date) + entries
 
-    const finalContent = existingContent
-      ? existingContent.trimEnd() + '\n\n' + newEntries
-      : buildCategoryFrontmatter(category, date) + newEntries
-
+    const filename = `${title}.md`
+    const fileHandle = await dirHandle.getFileHandle(filename, { create: true })
     const writable = await fileHandle.createWritable()
-    await writable.write(finalContent)
+    await writable.write(content)
     await writable.close()
   }
 }

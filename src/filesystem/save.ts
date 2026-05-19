@@ -7,8 +7,7 @@ export async function saveImageToVault(
   filename: string,
   base64: string,
 ): Promise<void> {
-  const dir = subDir.trim() || 'Clippings'
-  const dirHandle = await getDir(vaultHandle, dir)
+  const dirHandle = await getDirPath(vaultHandle, subDir, 'Clippings')
   const assetsHandle = await getDir(dirHandle, `${notename}.assets`)
   const safeFilename = filename.replace(/^\.+/, '') || 'image.png'
   const fileHandle = await assetsHandle.getFileHandle(safeFilename, { create: true })
@@ -25,8 +24,7 @@ export async function saveToVault(
   title: string,
   content: string
 ): Promise<string> {
-  const dir = subDir.trim() || 'Clippings'
-  const dirHandle = await getDir(vaultHandle, dir)
+  const dirHandle = await getDirPath(vaultHandle, subDir, 'Clippings')
 
   const existing = new Set<string>()
   for await (const name of dirHandle.keys()) {
@@ -58,14 +56,24 @@ export async function getDir(
   })
 }
 
+export async function getDirPath(
+  root: FileSystemDirectoryHandle,
+  path: string,
+  fallback: string,
+): Promise<FileSystemDirectoryHandle> {
+  const parts = (path.trim() || fallback).split('/').map(p => p.trim()).filter(Boolean)
+  let handle = root
+  for (const part of parts) handle = await getDir(handle, part)
+  return handle
+}
+
 export async function saveImageToSharedDir(
   vaultHandle: FileSystemDirectoryHandle,
   imageLocalDir: string,
   filename: string,
   base64: string,
 ): Promise<void> {
-  const dir = imageLocalDir.trim() || 'images'
-  const dirHandle = await getDir(vaultHandle, dir)
+  const dirHandle = await getDirPath(vaultHandle, imageLocalDir, 'images')
   const safeFilename = filename.replace(/^\.+/, '') || 'image.png'
   const fileHandle = await dirHandle.getFileHandle(safeFilename, { create: true })
   const writable = await fileHandle.createWritable()
