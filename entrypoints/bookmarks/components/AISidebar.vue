@@ -82,7 +82,7 @@ function openSettings() {
           <template v-if="entry.status === 'ok'">
             <a class="log-title" :href="entry.url" target="_blank" :title="entry.url">{{ entry.title }}</a>
             <span class="log-arrow">→</span>
-            <span class="log-category">{{ entry.category }}</span>
+            <span class="log-category">{{ entry.folder }}</span>
           </template>
           <template v-else>
             <span class="log-title error-title">{{ entry.title }}</span>

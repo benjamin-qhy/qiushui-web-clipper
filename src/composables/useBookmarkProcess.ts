@@ -3,8 +3,9 @@ import { browser } from 'wxt/browser'
 import type { Browser } from 'wxt/browser'
 import { getSettings } from '../storage/settings'
 import { createAIProvider } from '../ai/index'
-import { processBookmark } from '../bookmark/process'
-import { saveBookmarkRecord } from '../storage/bookmarks'
+import { fetchPageMeta } from '../bookmark/meta'
+import type { PageMeta } from '../bookmark/meta'
+import { classifyAndMove, renameBookmark } from '../bookmark/classify'
 
 type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
@@ -12,29 +13,28 @@ export interface LogEntry {
   time: string
   title: string
   url: string
-  category: string
-  status: 'ok' | 'error'
+  folder: string
+  status: 'ok' | 'warning' | 'error'
+  warning?: string
   error?: string
+}
+
+export interface CurrentItem {
+  index: number
+  total: number
+  url: string
+  phase: string
 }
 
 function nowTime(): string {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
-async function fetchPageText(url: string): Promise<string> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-    const html = await res.text()
-    return html.replace(/(<([^>]+)>)/gi, '').slice(0, 2000)
-  } catch {
-    return ''
-  }
-}
-
 export function useBookmarkProcess() {
   const state = ref<'idle' | 'processing' | 'done' | 'error'>('idle')
   const log = ref<LogEntry[]>([])
   const progress = ref({ done: 0, total: 0 })
+  const currentItem = ref<CurrentItem | null>(null)
 
   async function start(): Promise<void> {
     if (state.value === 'processing') return
@@ -42,6 +42,7 @@ export function useBookmarkProcess() {
     state.value = 'processing'
     log.value = []
     progress.value = { done: 0, total: 0 }
+    currentItem.value = null
 
     try {
       const settings = await getSettings()
@@ -50,78 +51,97 @@ export function useBookmarkProcess() {
       const results = await browser.bookmarks.search({ title: inboxName })
       const inboxFolder = results.find((r: BookmarkNode) => !r.url)
       if (!inboxFolder || !inboxFolder.parentId) {
+        state.value = 'error'
+        log.value.push({
+          time: nowTime(),
+          title: '未找到收件箱文件夹',
+          url: '',
+          folder: '',
+          status: 'error',
+          error: `未找到「${inboxName}」文件夹，请在书签中创建一个`,
+        })
+        return
+      }
+
+      const children = await browser.bookmarks.getChildren(inboxFolder.id)
+      const bookmarks = children.filter((c: BookmarkNode) => !!c.url)
+      progress.value.total = bookmarks.length
+
+      if (bookmarks.length === 0) {
         state.value = 'done'
         return
       }
 
-      const folderId = inboxFolder.id
-      const parentId = inboxFolder.parentId
-
-      const children = await browser.bookmarks.getChildren(folderId)
-      const bookmarks = children.filter((c: BookmarkNode) => !!c.url)
-
-      progress.value.total = bookmarks.length
-
       const aiProvider = createAIProvider(settings.aiConfig)
 
-      for (const bm of bookmarks) {
+      for (let i = 0; i < bookmarks.length; i++) {
+        const bm = bookmarks[i]
         if (!bm.url) continue
+
+        currentItem.value = { index: i + 1, total: bookmarks.length, url: bm.url, phase: '正在获取页面信息…' }
+
+        let meta: PageMeta
+        let metaWarning: string | undefined
+
         try {
-          const pageText = await fetchPageText(bm.url)
-          const result = await processBookmark(bm.title ?? '', bm.url, pageText, aiProvider)
+          meta = await fetchPageMeta(bm.url)
+          if (!meta.title) meta = { title: bm.title ?? '', keywords: '', description: '' }
+        } catch {
+          meta = { title: bm.title ?? '', keywords: '', description: '' }
+          metaWarning = '页面获取失败，已用书签标题兜底'
+        }
 
-          await saveBookmarkRecord({
-            id: bm.id,
-            url: bm.url,
-            title: bm.title ?? '',
-            summary: result.summary,
-            tags: result.tags,
-            category: result.category,
-            processedAt: Date.now(),
-          })
+        try {
+          currentItem.value = { ...currentItem.value, phase: 'AI 分类中…' }
+          const { folderPath } = await classifyAndMove(
+            bm.id,
+            meta,
+            bm.url,
+            inboxFolder.parentId!,
+            settings.bookmarkSystemPrompt,
+            aiProvider,
+          )
 
-          // Find or create target category folder (sibling of inbox)
-          const siblings = await browser.bookmarks.getChildren(parentId)
-          let categoryFolder = siblings.find((s: BookmarkNode) => !s.url && s.title === result.category)
-          if (!categoryFolder) {
-            categoryFolder = await browser.bookmarks.create({ parentId, title: result.category })
-          }
-
-          await browser.bookmarks.move(bm.id, { parentId: categoryFolder.id })
+          currentItem.value = { ...currentItem.value, phase: 'AI 生成标题…' }
+          const newTitle = await renameBookmark(bm.id, meta, bm.url, bm.title ?? '', aiProvider)
 
           log.value.push({
             time: nowTime(),
-            title: bm.title || bm.url,
+            title: newTitle,
             url: bm.url,
-            category: result.category,
-            status: 'ok',
+            folder: folderPath,
+            status: metaWarning ? 'warning' : 'ok',
+            warning: metaWarning,
           })
         } catch (e) {
           log.value.push({
             time: nowTime(),
             title: bm.title || bm.url,
             url: bm.url,
-            category: '',
+            folder: '',
             status: 'error',
             error: e instanceof Error ? e.message : String(e),
           })
         }
+
         progress.value.done++
       }
 
       state.value = 'done'
+      currentItem.value = null
     } catch (e) {
       state.value = 'error'
       log.value.push({
         time: nowTime(),
         title: '处理出错',
         url: '',
-        category: '',
+        folder: '',
         status: 'error',
         error: e instanceof Error ? e.message : String(e),
       })
+      currentItem.value = null
     }
   }
 
-  return { state, log, progress, start }
+  return { state, log, progress, currentItem, start }
 }

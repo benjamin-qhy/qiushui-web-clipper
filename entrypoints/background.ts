@@ -1,8 +1,9 @@
 import { browser } from 'wxt/browser'
 import { getSettings } from '../src/storage/settings'
-import { saveBookmarkRecord, type ProcessingStatus } from '../src/storage/bookmarks'
-import { processBookmark } from '../src/bookmark/process'
+import type { ProcessingStatus } from '../src/storage/bookmarks'
 import { createAIProvider } from '../src/ai/index'
+import { fetchPageMeta } from '../src/bookmark/meta'
+import { classifyAndMove, renameBookmark } from '../src/bookmark/classify'
 import type { Browser } from 'wxt/browser'
 
 type BookmarkTreeNode = Browser.bookmarks.BookmarkTreeNode
@@ -16,16 +17,6 @@ let processingStatus: ProcessingStatus = {
 
 export function getProcessingStatus(): ProcessingStatus {
   return processingStatus
-}
-
-async function fetchPageText(url: string): Promise<string> {
-  try {
-    const res = await fetch(url)
-    const html = await res.text()
-    return html.replace(/(<([^>]+)>)/gi, '').slice(0, 5000)
-  } catch {
-    return ''
-  }
 }
 
 async function triggerProcessing(): Promise<void> {
@@ -49,10 +40,9 @@ async function triggerProcessing(): Promise<void> {
       return
     }
 
-    const folderId = inboxFolder.id
     const parentId = inboxFolder.parentId
 
-    const children = await browser.bookmarks.getChildren(folderId)
+    const children = await browser.bookmarks.getChildren(inboxFolder.id)
     const bookmarks = children.filter((c: BookmarkTreeNode) => !!c.url)
 
     processingStatus.total = bookmarks.length
@@ -62,26 +52,11 @@ async function triggerProcessing(): Promise<void> {
     for (const bm of bookmarks) {
       if (!bm.url) continue
       try {
-        const pageText = await fetchPageText(bm.url)
-        const result = await processBookmark(bm.title || '', bm.url, pageText, aiProvider)
+        let meta = await fetchPageMeta(bm.url).catch(() => ({ title: bm.title ?? '', keywords: '', description: '' }))
+        if (!meta.title) meta = { title: bm.title ?? '', keywords: '', description: '' }
 
-        await saveBookmarkRecord({
-          id: bm.id,
-          url: bm.url,
-          title: bm.title || '',
-          summary: result.summary,
-          tags: result.tags,
-          category: result.category,
-          processedAt: Date.now(),
-        })
-
-        const siblings = await browser.bookmarks.getChildren(parentId)
-        let categoryFolder = siblings.find((s: BookmarkTreeNode) => !s.url && s.title === result.category)
-        if (!categoryFolder) {
-          categoryFolder = await browser.bookmarks.create({ parentId, title: result.category })
-        }
-
-        await browser.bookmarks.move(bm.id, { parentId: categoryFolder.id })
+        await classifyAndMove(bm.id, meta, bm.url, parentId, settings.bookmarkSystemPrompt, aiProvider)
+        await renameBookmark(bm.id, meta, bm.url, bm.title ?? '', aiProvider)
         processingStatus.processed++
       } catch {
         // Skip failed bookmark and continue with the rest
@@ -100,11 +75,6 @@ async function triggerProcessing(): Promise<void> {
 }
 
 async function handleMessage(msg: { type: string; url?: string }): Promise<unknown> {
-  if (msg.type === 'FETCH_PAGE') {
-    if (!msg.url) return { text: '' }
-    return { text: await fetchPageText(msg.url) }
-  }
-
   if (msg.type === 'PROCESS_BOOKMARKS') {
     triggerProcessing()
     return { ok: true }
