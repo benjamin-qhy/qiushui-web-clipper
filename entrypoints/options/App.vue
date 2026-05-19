@@ -428,6 +428,16 @@ async function testAIModel() {
           <label class="field-label" for="ai-model">AI 模型名称</label>
           <input id="ai-model" v-model="settings.aiConfig.model" class="field-input" placeholder="qwen-long" />
         </div>
+        <div class="field">
+          <label class="field-label" for="ai-system-prompt">系统提示词</label>
+          <textarea
+            id="ai-system-prompt"
+            v-model="settings.bookmarkSystemPrompt"
+            class="field-input field-textarea"
+            rows="4"
+          />
+          <p class="field-hint">文件夹结构和输出格式由系统自动附加，此处可追加自定义指令。</p>
+        </div>
         <div class="field test-row">
           <button class="btn-secondary" type="button" :disabled="aiTestStatus === 'testing'" @click="testAIModel">
             {{ aiTestStatus === 'testing' ? '测试中…' : '测试模型' }}
@@ -679,6 +689,11 @@ async function testAIModel() {
 .field-inline-error {
   margin: -8px 0 18px;
   max-width: 520px;
+}
+.field-textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
 }
 .bottom-save {
   display: flex;

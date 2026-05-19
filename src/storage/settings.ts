@@ -25,6 +25,7 @@ export interface Settings {
   aiConfig: AIConfig
   bookmarkInboxFolder: string
   bookmarkSubDir: string
+  bookmarkSystemPrompt: string
 }
 
 const STORAGE_KEY = 'feishu-clipper-settings'
@@ -50,6 +51,7 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   bookmarkInboxFolder: '待整理',
   bookmarkSubDir: 'Bookmarks',
+  bookmarkSystemPrompt: '你是一个书签整理助手。根据网页的标题、关键词、描述和 URL，从给定的文件夹结构中选出最合适的目录路径。',
 }
 
 export async function getSettings(): Promise<Settings> {
