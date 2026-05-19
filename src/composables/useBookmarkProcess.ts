@@ -5,7 +5,7 @@ import { getSettings } from '../storage/settings'
 import { createAIProvider } from '../ai/index'
 import { fetchPageMeta } from '../bookmark/meta'
 import type { PageMeta } from '../bookmark/meta'
-import { classifyAndMove, renameBookmark } from '../bookmark/classify'
+import { processBookmark } from '../bookmark/classify'
 
 type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
@@ -93,17 +93,15 @@ export function useBookmarkProcess() {
 
         try {
           currentItem.value = { ...currentItem.value, phase: 'AI 分类中…' }
-          const { folderPath } = await classifyAndMove(
+          const { folderPath, title: newTitle } = await processBookmark(
             bm.id,
             meta,
             bm.url,
+            bm.title ?? '',
             inboxFolder.parentId!,
             settings.bookmarkSystemPrompt,
             aiProvider,
           )
-
-          currentItem.value = { ...currentItem.value, phase: 'AI 生成标题…' }
-          const newTitle = await renameBookmark(bm.id, meta, bm.url, bm.title ?? '', aiProvider)
 
           log.value.push({
             time: nowTime(),

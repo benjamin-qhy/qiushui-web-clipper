@@ -3,7 +3,7 @@ import { getSettings } from '../src/storage/settings'
 import type { ProcessingStatus } from '../src/storage/bookmarks'
 import { createAIProvider } from '../src/ai/index'
 import { fetchPageMeta } from '../src/bookmark/meta'
-import { classifyAndMove, renameBookmark } from '../src/bookmark/classify'
+import { processBookmark } from '../src/bookmark/classify'
 import type { Browser } from 'wxt/browser'
 
 type BookmarkTreeNode = Browser.bookmarks.BookmarkTreeNode
@@ -55,8 +55,7 @@ async function triggerProcessing(): Promise<void> {
         let meta = await fetchPageMeta(bm.url).catch(() => ({ title: bm.title ?? '', keywords: '', description: '' }))
         if (!meta.title) meta = { title: bm.title ?? '', keywords: '', description: '' }
 
-        await classifyAndMove(bm.id, meta, bm.url, parentId, settings.bookmarkSystemPrompt, aiProvider)
-        await renameBookmark(bm.id, meta, bm.url, bm.title ?? '', aiProvider)
+        await processBookmark(bm.id, meta, bm.url, bm.title ?? '', parentId, settings.bookmarkSystemPrompt, aiProvider)
         processingStatus.processed++
       } catch {
         // Skip failed bookmark and continue with the rest

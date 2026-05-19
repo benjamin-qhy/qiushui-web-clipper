@@ -29,7 +29,14 @@ export function buildFolderPathMap(nodes: BookmarkNode[], prefix = ''): Map<stri
   return map
 }
 
-export function buildClassifyPrompt(
+export interface ProcessResult {
+  folder: string
+  title: string
+  summary: string
+  tags: string[]
+}
+
+export function buildProcessPrompt(
   meta: PageMeta,
   url: string,
   folderPaths: string[],
@@ -41,7 +48,7 @@ export function buildClassifyPrompt(
 ${folderPaths.join('\n')}
 
 输出格式（仅输出 JSON，不要其他内容）：
-{"folder":"文件夹路径"}`
+{"folder":"文件夹路径","title":"网站名 - 简短描述","summary":"2-3句描述这个网页的内容和用途","tags":["标签1","标签2"]}`
 
   const user = `标题：${meta.title}
 URL：${url}
@@ -51,35 +58,23 @@ URL：${url}
   return { system, user }
 }
 
-export function buildTitlePrompt(meta: PageMeta, url: string): string {
-  return `根据以下网页信息，生成一个简洁的书签标题，格式为「网站名 - 简短描述」，15字以内，中文。
-
-标题：${meta.title}
-URL：${url}
-关键词：${meta.keywords}
-描述：${meta.description}
-
-输出格式（仅输出 JSON，不要其他内容）：
-{"title":"网站名 - 简短描述"}`
-}
-
-export function parseFolder(raw: string): string {
+export function parseProcessResult(raw: string, fallbackTitle: string): ProcessResult {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>
     const folder = typeof parsed.folder === 'string' ? parsed.folder.trim() : ''
-    return folder || '其他'
-  } catch {
-    return '其他'
-  }
-}
-
-export function parseTitle(raw: string, fallback: string): string {
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>
     const title = typeof parsed.title === 'string' ? parsed.title.trim() : ''
-    return title || fallback
+    const summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : ''
+    const tags = Array.isArray(parsed.tags)
+      ? (parsed.tags as unknown[]).filter(t => typeof t === 'string').map(t => (t as string).trim())
+      : []
+    return {
+      folder: folder || '其他',
+      title: title || fallbackTitle,
+      summary,
+      tags,
+    }
   } catch {
-    return fallback
+    return { folder: '其他', title: fallbackTitle, summary: '', tags: [] }
   }
 }
 
@@ -91,41 +86,36 @@ async function findOrCreateFolder(parentId: string, name: string): Promise<strin
   return created.id
 }
 
-export async function classifyAndMove(
+export async function processBookmark(
   bookmarkId: string,
   meta: PageMeta,
   url: string,
+  originalTitle: string,
   inboxParentId: string,
   userSystemPrompt: string,
   aiProvider: AIProvider,
-): Promise<{ folderPath: string }> {
+): Promise<{ folderPath: string; title: string; summary: string; tags: string[] }> {
   const tree = await browser.bookmarks.getTree()
   const rootChildren = tree[0]?.children ?? []
   const folderPaths = buildFolderPaths(rootChildren)
   const pathMap = buildFolderPathMap(rootChildren)
 
-  const { system, user } = buildClassifyPrompt(meta, url, folderPaths, userSystemPrompt)
+  const { system, user } = buildProcessPrompt(meta, url, folderPaths, userSystemPrompt)
   const raw = await aiProvider.complete(user, system)
-  const folderPath = parseFolder(raw)
+  const result = parseProcessResult(raw, originalTitle)
 
-  const resolvedPath = pathMap.has(folderPath) ? folderPath : '其他'
-  const targetFolderId = pathMap.get(folderPath)
+  const resolvedPath = pathMap.has(result.folder) ? result.folder : '其他'
+  const targetFolderId = pathMap.get(result.folder)
+    ?? pathMap.get('其他')
     ?? await findOrCreateFolder(inboxParentId, '其他')
 
   await browser.bookmarks.move(bookmarkId, { parentId: targetFolderId })
-  return { folderPath: resolvedPath }
-}
+  await browser.bookmarks.update(bookmarkId, { title: result.title })
 
-export async function renameBookmark(
-  bookmarkId: string,
-  meta: PageMeta,
-  url: string,
-  originalTitle: string,
-  aiProvider: AIProvider,
-): Promise<string> {
-  const prompt = buildTitlePrompt(meta, url)
-  const raw = await aiProvider.complete(prompt)
-  const newTitle = parseTitle(raw, originalTitle)
-  await browser.bookmarks.update(bookmarkId, { title: newTitle })
-  return newTitle
+  return {
+    folderPath: resolvedPath,
+    title: result.title,
+    summary: result.summary,
+    tags: result.tags,
+  }
 }

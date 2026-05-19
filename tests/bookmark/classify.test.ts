@@ -2,10 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   buildFolderPaths,
   buildFolderPathMap,
-  buildClassifyPrompt,
-  buildTitlePrompt,
-  parseFolder,
-  parseTitle,
+  buildProcessPrompt,
+  parseProcessResult,
 } from '../../src/bookmark/classify'
 import type { PageMeta } from '../../src/bookmark/meta'
 
@@ -54,62 +52,69 @@ describe('buildFolderPathMap', () => {
   })
 })
 
-describe('buildClassifyPrompt', () => {
+describe('buildProcessPrompt', () => {
   const meta: PageMeta = { title: 'React', keywords: 'frontend,hooks', description: 'A JS library' }
 
   it('puts user system prompt and folder list in system part', () => {
-    const { system } = buildClassifyPrompt(meta, 'https://react.dev', ['书签栏/前端'], '自定义指令')
+    const { system } = buildProcessPrompt(meta, 'https://react.dev', ['书签栏/前端'], '自定义指令')
     expect(system).toContain('自定义指令')
     expect(system).toContain('书签栏/前端')
-    expect(system).toContain('{"folder":')
+    expect(system).toContain('"folder"')
+    expect(system).toContain('"title"')
+    expect(system).toContain('"summary"')
+    expect(system).toContain('"tags"')
   })
 
   it('puts meta info in user part', () => {
-    const { user } = buildClassifyPrompt(meta, 'https://react.dev', [], '指令')
+    const { user } = buildProcessPrompt(meta, 'https://react.dev', [], '指令')
     expect(user).toContain('React')
     expect(user).toContain('https://react.dev')
     expect(user).toContain('frontend,hooks')
   })
 })
 
-describe('buildTitlePrompt', () => {
-  it('includes meta info and output format constraint', () => {
-    const meta: PageMeta = { title: 'GitHub', keywords: '', description: 'Code hosting' }
-    const prompt = buildTitlePrompt(meta, 'https://github.com')
-    expect(prompt).toContain('GitHub')
-    expect(prompt).toContain('https://github.com')
-    expect(prompt).toContain('{"title":')
-  })
-})
-
-describe('parseFolder', () => {
-  it('parses valid JSON folder path', () => {
-    expect(parseFolder('{"folder":"书签栏/工作/前端"}')).toBe('书签栏/工作/前端')
-  })
-
-  it('returns 其他 on invalid JSON', () => {
-    expect(parseFolder('not json')).toBe('其他')
+describe('parseProcessResult', () => {
+  it('parses all fields from valid JSON', () => {
+    const raw = JSON.stringify({
+      folder: '书签栏/工作/前端',
+      title: 'React - 前端框架',
+      summary: '这是一个用于构建用户界面的 JavaScript 库。',
+      tags: ['前端', 'React'],
+    })
+    const result = parseProcessResult(raw, '原标题')
+    expect(result.folder).toBe('书签栏/工作/前端')
+    expect(result.title).toBe('React - 前端框架')
+    expect(result.summary).toBe('这是一个用于构建用户界面的 JavaScript 库。')
+    expect(result.tags).toEqual(['前端', 'React'])
   })
 
-  it('returns 其他 when folder field is empty string', () => {
-    expect(parseFolder('{"folder":""}')).toBe('其他')
+  it('falls back to 其他 and fallbackTitle on invalid JSON', () => {
+    const result = parseProcessResult('not json', '原标题')
+    expect(result.folder).toBe('其他')
+    expect(result.title).toBe('原标题')
+    expect(result.summary).toBe('')
+    expect(result.tags).toEqual([])
   })
 
-  it('returns 其他 when folder field is missing', () => {
-    expect(parseFolder('{}')).toBe('其他')
-  })
-})
-
-describe('parseTitle', () => {
-  it('parses valid JSON title', () => {
-    expect(parseTitle('{"title":"GitHub - 代码托管平台"}', '原标题')).toBe('GitHub - 代码托管平台')
+  it('falls back to 其他 when folder is empty string', () => {
+    const result = parseProcessResult('{"folder":"","title":"T","summary":"S","tags":[]}', '原')
+    expect(result.folder).toBe('其他')
   })
 
-  it('returns fallback on invalid JSON', () => {
-    expect(parseTitle('bad json', '原标题')).toBe('原标题')
+  it('falls back to fallbackTitle when title is empty', () => {
+    const result = parseProcessResult('{"folder":"F","title":"","summary":"S","tags":[]}', '原标题')
+    expect(result.title).toBe('原标题')
   })
 
-  it('returns fallback when title field is empty', () => {
-    expect(parseTitle('{"title":""}', '原标题')).toBe('原标题')
+  it('filters non-string values from tags array', () => {
+    const raw = JSON.stringify({ folder: 'F', title: 'T', summary: 'S', tags: ['a', 1, null, 'b'] })
+    const result = parseProcessResult(raw, '原')
+    expect(result.tags).toEqual(['a', 'b'])
+  })
+
+  it('returns empty tags when tags field is missing', () => {
+    const raw = JSON.stringify({ folder: 'F', title: 'T', summary: 'S' })
+    const result = parseProcessResult(raw, '原')
+    expect(result.tags).toEqual([])
   })
 })
