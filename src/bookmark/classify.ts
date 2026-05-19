@@ -2,6 +2,7 @@ import { browser } from 'wxt/browser'
 import type { Browser } from 'wxt/browser'
 import type { AIProvider } from '../ai/types'
 import type { PageMeta } from './meta'
+import { getFolderDescriptions } from '../storage/folderDescriptions'
 
 type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
@@ -102,7 +103,8 @@ export async function processBookmark(
 ): Promise<{ folderPath: string; title: string; summary: string; tags: string[] }> {
   const tree = await browser.bookmarks.getTree()
   const rootChildren = tree[0]?.children ?? []
-  const folderPaths = buildFolderPaths(rootChildren)
+  const descriptions = await getFolderDescriptions()
+  const folderPaths = buildFolderPaths(rootChildren, descriptions)
   const pathMap = buildFolderPathMap(rootChildren)
 
   const { system, user } = buildProcessPrompt(meta, url, folderPaths, userSystemPrompt)
