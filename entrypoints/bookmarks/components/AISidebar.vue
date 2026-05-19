@@ -64,11 +64,19 @@ function openSettings() {
       </button>
     </div>
 
+    <!-- Current item indicator -->
+    <div v-if="processor.currentItem.value" class="current-item">
+      <span class="current-index">{{ processor.currentItem.value.index }}/{{ processor.currentItem.value.total }}</span>
+      <span class="current-phase">{{ processor.currentItem.value.phase }}</span>
+      <span class="current-url">{{ processor.currentItem.value.url }}</span>
+    </div>
+
     <!-- Log -->
     <div class="log-area">
       <div v-if="processor.log.value.length === 0" class="log-empty">
         <span v-if="processor.state.value === 'idle'">点击上方按钮开始整理</span>
         <span v-else-if="processor.state.value === 'processing'">正在处理…</span>
+        <span v-else-if="processor.state.value === 'error'">出错，请检查配置</span>
       </div>
 
       <div
@@ -77,12 +85,18 @@ function openSettings() {
         class="log-entry"
         :class="entry.status"
       >
+        <span class="log-status">
+          <span v-if="entry.status === 'ok'">✓</span>
+          <span v-else-if="entry.status === 'warning'">✗</span>
+          <span v-else>⊘</span>
+        </span>
         <span class="log-time">{{ entry.time }}</span>
         <span class="log-body">
-          <template v-if="entry.status === 'ok'">
+          <template v-if="entry.status !== 'error'">
             <a class="log-title" :href="entry.url" target="_blank" :title="entry.url">{{ entry.title }}</a>
             <span class="log-arrow">→</span>
-            <span class="log-category">{{ entry.folder }}</span>
+            <span class="log-folder">{{ entry.folder }}</span>
+            <span v-if="entry.warning" class="log-warning">（{{ entry.warning }}）</span>
           </template>
           <template v-else>
             <span class="log-title error-title">{{ entry.title }}</span>
@@ -94,6 +108,9 @@ function openSettings() {
       <div v-if="processor.state.value === 'done' && processor.log.value.length > 0" class="log-summary">
         完成：共 {{ processor.progress.value.total }} 条，
         成功 {{ processor.log.value.filter(e => e.status === 'ok').length }} 条
+        <template v-if="processor.log.value.filter(e => e.status === 'warning').length > 0">
+          ，警告 {{ processor.log.value.filter(e => e.status === 'warning').length }} 条
+        </template>
         <template v-if="processor.log.value.filter(e => e.status === 'error').length > 0">
           ，失败 {{ processor.log.value.filter(e => e.status === 'error').length }} 条
         </template>
@@ -173,6 +190,34 @@ function openSettings() {
 .btn-process:hover { opacity: 0.85; }
 .btn-process:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Current item */
+.current-item {
+  padding: 8px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.current-index {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+.current-phase {
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.current-url {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Log */
 .log-area {
   flex: 1;
@@ -188,12 +233,20 @@ function openSettings() {
 .log-entry {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
   padding: 6px 16px;
   font-size: 14px;
   line-height: 1.5;
   border-bottom: 1px solid var(--color-border-light);
 }
+.log-status {
+  flex-shrink: 0;
+  font-size: 14px;
+  width: 14px;
+}
+.log-entry.ok .log-status { color: #2e7d32; }
+.log-entry.warning .log-status { color: #e65100; }
+.log-entry.error .log-status { color: #c62828; }
 .log-entry:last-of-type { border-bottom: none; }
 .log-time {
   flex-shrink: 0;
@@ -227,10 +280,14 @@ a.log-title:hover { color: var(--color-accent); text-decoration: underline; }
   color: var(--color-text-muted);
   flex-shrink: 0;
 }
-.log-category {
+.log-folder {
   color: var(--color-accent);
   font-weight: 600;
   white-space: nowrap;
+}
+.log-warning {
+  color: #e65100;
+  font-size: 14px;
 }
 .log-error {
   color: #c62828;
