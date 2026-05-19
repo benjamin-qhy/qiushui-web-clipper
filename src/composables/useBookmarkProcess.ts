@@ -6,6 +6,7 @@ import { createAIProvider } from '../ai/index'
 import { fetchPageMeta } from '../bookmark/meta'
 import type { PageMeta } from '../bookmark/meta'
 import { processBookmark } from '../bookmark/classify'
+import { saveBookmarkRecord } from '../storage/bookmarks'
 
 type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
@@ -52,7 +53,7 @@ export function useBookmarkProcess() {
       const inboxFolder = results.find((r: BookmarkNode) => !r.url)
       if (!inboxFolder || !inboxFolder.parentId) {
         state.value = 'error'
-        log.value.push({
+        log.value.unshift({
           time: nowTime(),
           title: '未找到收件箱文件夹',
           url: '',
@@ -92,8 +93,8 @@ export function useBookmarkProcess() {
         }
 
         try {
-          currentItem.value = { ...currentItem.value, phase: 'AI 分类中…' }
-          const { folderPath, title: newTitle } = await processBookmark(
+          currentItem.value = { ...currentItem.value, phase: 'AI 整理中…' }
+          const { folderPath, title, summary, tags } = await processBookmark(
             bm.id,
             meta,
             bm.url,
@@ -103,16 +104,26 @@ export function useBookmarkProcess() {
             aiProvider,
           )
 
-          log.value.push({
+          await saveBookmarkRecord({
+            id: bm.id,
+            url: bm.url,
+            title,
+            summary,
+            tags,
+            category: folderPath,
+            processedAt: Date.now(),
+          })
+
+          log.value.unshift({
             time: nowTime(),
-            title: newTitle,
+            title,
             url: bm.url,
             folder: folderPath,
             status: metaWarning ? 'warning' : 'ok',
             warning: metaWarning,
           })
         } catch (e) {
-          log.value.push({
+          log.value.unshift({
             time: nowTime(),
             title: bm.title || bm.url,
             url: bm.url,
@@ -129,7 +140,7 @@ export function useBookmarkProcess() {
       currentItem.value = null
     } catch (e) {
       state.value = 'error'
-      log.value.push({
+      log.value.unshift({
         time: nowTime(),
         title: '处理出错',
         url: '',
