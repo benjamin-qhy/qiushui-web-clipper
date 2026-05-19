@@ -26,7 +26,10 @@ async function saveDescription() {
 }
 
 onMounted(async () => {
-  tree.loadTree()
+  await tree.loadTree()
+  if (tree.folderTree.value.length > 0) {
+    await handleSelect(tree.folderTree.value[0].id).catch(setError)
+  }
   const settings = await getSettings()
   aiAvailable.value = !!settings.aiConfig.apiKey
 })

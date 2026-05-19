@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { BookmarkListItem, SelectedFolderStats } from '../../../src/composables/useBookmarkTree'
 import type { BookmarkRecord } from '../../../src/storage/bookmarks'
 
@@ -8,12 +9,61 @@ const props = defineProps<{
   records?: Map<string, BookmarkRecord>
   folderTitle: string
   folderStats: SelectedFolderStats
+  aiAvailable?: boolean
+  isSearchActive?: boolean
+  isSearching?: boolean
+  searchQuery?: string
+  searchError?: string | null
 }>()
 
 const emit = defineEmits<{
   deleteBookmark: [id: string]
   openBookmark: [url: string]
+  search: [query: string]
+  aiSearch: [query: string]
+  clearSearch: []
 }>()
+
+const localQuery = ref('')
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+// Sync external searchQuery back to localQuery (e.g., when cleared from parent)
+watch(() => props.searchQuery, val => {
+  if (val !== undefined && val !== localQuery.value) {
+    localQuery.value = val
+  }
+})
+
+function onQueryInput() {
+  clearTimeout(debounceTimer)
+  if (!localQuery.value.trim()) {
+    emit('clearSearch')
+    return
+  }
+  debounceTimer = setTimeout(() => {
+    emit('search', localQuery.value)
+  }, 300)
+}
+
+function onSearchSubmit() {
+  clearTimeout(debounceTimer)
+  if (localQuery.value.trim()) {
+    emit('search', localQuery.value)
+  }
+}
+
+function onAISearch() {
+  clearTimeout(debounceTimer)
+  if (localQuery.value.trim()) {
+    emit('aiSearch', localQuery.value)
+  }
+}
+
+function onEscape() {
+  clearTimeout(debounceTimer)
+  localQuery.value = ''
+  emit('clearSearch')
+}
 
 function getDomain(url: string): string {
   try { return new URL(url).hostname } catch { return '' }
@@ -38,20 +88,50 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
 <template>
   <div class="list-panel">
     <div class="list-header">
-      <h2 class="folder-title">{{ folderTitle || '请选择文件夹' }}</h2>
-      <span class="count" v-if="bookmarks.length > 0">
-        {{ bookmarks.length }} 条
-        <template v-if="folderStats.childFolderCount > 0">
-          （含子文件夹，直接 {{ folderStats.directBookmarkCount }} 条）
-        </template>
-      </span>
+      <div class="header-left">
+        <h2 class="folder-title">
+          <template v-if="isSearchActive">
+            <span v-if="isSearching">搜索中…</span>
+            <span v-else>搜索结果</span>
+          </template>
+          <template v-else>{{ folderTitle || '请选择文件夹' }}</template>
+        </h2>
+        <span class="count" v-if="!isSearching && bookmarks.length > 0">
+          {{ bookmarks.length }} 条
+          <template v-if="!isSearchActive && folderStats.childFolderCount > 0">
+            （含子文件夹，直接 {{ folderStats.directBookmarkCount }} 条）
+          </template>
+        </span>
+      </div>
+      <div class="header-search">
+        <input
+          v-model="localQuery"
+          class="search-input"
+          :class="{ active: isSearchActive }"
+          placeholder="搜索书签…"
+          @input="onQueryInput"
+          @keydown.enter.prevent="onSearchSubmit"
+          @keydown.escape="onEscape"
+        />
+        <button
+          v-if="aiAvailable"
+          class="btn-ai"
+          :disabled="isSearching || !localQuery.trim()"
+          title="AI 语义搜索"
+          @click="onAISearch"
+        >AI搜索</button>
+      </div>
     </div>
 
-    <div v-if="!folderTitle" class="empty-hint">← 点击左侧文件夹查看书签</div>
+    <div v-if="searchError" class="search-error">{{ searchError }}</div>
 
-    <div v-else-if="bookmarks.length === 0" class="empty-hint">此文件夹暂无书签</div>
+    <div v-if="isSearchActive && !isSearching && bookmarks.length === 0" class="empty-hint">
+      未找到匹配的书签
+    </div>
+    <div v-else-if="!isSearchActive && !folderTitle" class="empty-hint">← 点击左侧文件夹查看书签</div>
+    <div v-else-if="!isSearchActive && bookmarks.length === 0 && folderTitle" class="empty-hint">此文件夹暂无书签</div>
 
-    <ul v-else class="bookmark-list">
+    <ul v-else-if="bookmarks.length > 0" class="bookmark-list">
       <li
         v-for="bm in bookmarks"
         :key="bm.id"
@@ -93,22 +173,77 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 18px;
+  padding: 10px 18px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 .folder-title {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  flex: 1;
   color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .count {
   font-size: 14px;
   color: var(--color-text-muted);
-  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Search bar */
+.header-search {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.search-input {
+  width: 160px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+  transition: width 0.15s, border-color 0.15s;
+}
+.search-input::placeholder { color: var(--color-text-muted); }
+.search-input:focus { border-color: var(--color-accent); width: 220px; }
+.search-input.active { border-color: var(--color-accent); width: 220px; }
+.btn-ai {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  background: var(--color-dark);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.btn-ai:hover:not(:disabled) { opacity: 0.8; }
+.btn-ai:disabled { opacity: 0.4; cursor: not-allowed; }
+.search-error {
+  padding: 6px 18px;
+  font-size: 13px;
+  color: #c62828;
+  background: #fce8e6;
+  border-bottom: 1px solid #f5c6c6;
+  flex-shrink: 0;
 }
 .empty-hint {
   padding: 48px 18px;

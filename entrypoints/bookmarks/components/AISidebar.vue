@@ -1,10 +1,45 @@
 <!-- entrypoints/bookmarks/components/AISidebar.vue -->
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { browser } from 'wxt/browser'
 import { useBookmarkProcess } from '../../../src/composables/useBookmarkProcess'
+import { useVaultStore } from '../../../src/composables/useVaultStore'
+import { getAllBookmarkRecords } from '../../../src/storage/bookmarks'
+import { getSettings } from '../../../src/storage/settings'
+import { exportCategoriesToVault } from '../../../src/bookmark/export'
 
 const processor = useBookmarkProcess()
+const vault = useVaultStore()
+
+const exportState = ref<'idle' | 'exporting' | 'done' | 'error'>('idle')
+const exportError = ref('')
+
+onMounted(() => vault.init())
+
+async function handleExport() {
+  if (exportState.value === 'exporting') return
+  exportState.value = 'exporting'
+  exportError.value = ''
+  try {
+    if (!vault.isAuthorized.value) {
+      if (vault.needsReauth.value) {
+        await vault.reauthorize()
+      } else {
+        await vault.authorize()
+      }
+    }
+    if (!vault.handle.value) throw new Error('未选择 Obsidian vault')
+    const settings = await getSettings()
+    const records = await getAllBookmarkRecords()
+    await exportCategoriesToVault(vault.handle.value, settings.bookmarkSubDir, records)
+    exportState.value = 'done'
+    setTimeout(() => { exportState.value = 'idle' }, 3000)
+  } catch (e) {
+    exportState.value = 'error'
+    exportError.value = e instanceof Error ? e.message : String(e)
+    setTimeout(() => { exportState.value = 'idle' }, 4000)
+  }
+}
 
 const sidebarWidth = ref(320)
 let dragStartX = 0
@@ -57,10 +92,30 @@ function openSettings() {
         :disabled="processor.state.value === 'processing'"
         @click="processor.start()"
       >
-        <span v-if="processor.state.value === 'processing'">
+        <span v-if="processor.state.value === 'processing' && !processor.isMoving.value">
           整理中… {{ processor.progress.value.done }}/{{ processor.progress.value.total }}
         </span>
         <span v-else>▶ 整理「待整理」文件夹</span>
+      </button>
+      <button
+        class="btn-process btn-reprocess"
+        :disabled="processor.state.value === 'processing'"
+        @click="processor.startAll()"
+      >
+        <span v-if="processor.isMoving.value">
+          搬移中… {{ processor.moveProgress.value.done }}/{{ processor.moveProgress.value.total }}
+        </span>
+        <span v-else>↺ 重新整理所有书签</span>
+      </button>
+      <button
+        class="btn-process btn-export"
+        :disabled="exportState === 'exporting'"
+        @click="handleExport"
+      >
+        <span v-if="exportState === 'exporting'">导出中…</span>
+        <span v-else-if="exportState === 'done'">✓ 导出完成</span>
+        <span v-else-if="exportState === 'error'" :title="exportError">✕ 导出失败</span>
+        <span v-else>↑ 导出到 Obsidian</span>
       </button>
     </div>
 
@@ -160,7 +215,7 @@ function openSettings() {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 26px;
   color: var(--color-text-muted);
   padding: 0 3px;
   line-height: 1;
@@ -187,6 +242,19 @@ function openSettings() {
   text-align: center;
   letter-spacing: 0.3px;
 }
+.btn-process + .btn-process { margin-top: 8px; }
+.btn-reprocess {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.btn-reprocess:hover:not(:disabled) { background: var(--color-border-light); opacity: 1; }
+.btn-export {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+.btn-export:hover:not(:disabled) { background: #fff8f0; opacity: 1; }
 .btn-process:hover { opacity: 0.85; }
 .btn-process:disabled { opacity: 0.5; cursor: not-allowed; }
 

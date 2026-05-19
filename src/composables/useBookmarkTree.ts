@@ -6,6 +6,8 @@ import { getSettings } from '../storage/settings'
 import { getAllBookmarkRecords } from '../storage/bookmarks'
 import type { BookmarkRecord } from '../storage/bookmarks'
 
+const BAR_TITLES = new Set(['书签栏', 'Bookmarks bar', 'Bookmarks Bar'])
+
 export type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 export interface BookmarkListItem extends BookmarkNode {
   folderPath: string
@@ -86,8 +88,12 @@ export function useBookmarkTree() {
       const roots = await browser.bookmarks.getTree()
       if (roots.length === 0) return
       // roots[0] is the invisible root; its children are Bookmarks Bar, Other Bookmarks, etc.
-      folderTree.value = buildFolderTree(roots[0].children ?? [])
-      folderPathById.value = buildFolderPathById(roots[0].children ?? [])
+      const allChildren = roots[0].children ?? []
+      const bar = allChildren.find(n => !n.url && BAR_TITLES.has(n.title)) ?? allChildren[0]
+      if (bar && !expandedIds.value.has(bar.id)) expandedIds.value.add(bar.id)
+      const barNodes = bar ? [bar] : []
+      folderTree.value = buildFolderTree(barNodes)
+      folderPathById.value = buildFolderPathById(barNodes)
 
       const records = await getAllBookmarkRecords()
       processedIds.value = new Set(records.map(r => r.id))
