@@ -4,6 +4,7 @@ import { browser } from 'wxt/browser'
 import type { Browser } from 'wxt/browser'
 import { getSettings } from '../storage/settings'
 import { getAllBookmarkRecords } from '../storage/bookmarks'
+import type { BookmarkRecord } from '../storage/bookmarks'
 
 export type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
@@ -20,6 +21,7 @@ export function useBookmarkTree() {
   const selectedFolderId = ref<string | null>(null)
   const selectedBookmarks = ref<BookmarkNode[]>([])
   const processedIds = ref<Set<string>>(new Set())
+  const recordsMap = ref<Map<string, BookmarkRecord>>(new Map())
   const dragOverFolderId = ref<string | null>(null)
   const expandedIds = ref<Set<string>>(new Set())
   const error = ref<string | null>(null)
@@ -46,6 +48,7 @@ export function useBookmarkTree() {
 
       const records = await getAllBookmarkRecords()
       processedIds.value = new Set(records.map(r => r.id))
+      recordsMap.value = new Map(records.map(r => [r.id, r]))
       error.value = null
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -154,6 +157,7 @@ export function useBookmarkTree() {
     selectedFolderId,
     selectedBookmarks,
     processedIds,
+    recordsMap,
     dragOverFolderId,
     error,
     loadTree,
