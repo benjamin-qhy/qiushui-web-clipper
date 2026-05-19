@@ -63,10 +63,16 @@ export function useBookmarkProcess() {
   const currentItem = ref<CurrentItem | null>(null)
   const moveProgress = ref({ done: 0, total: 0 })
   const isMoving = ref(false)
+  let stopRequested = false
+
+  function stop() {
+    stopRequested = true
+  }
 
   async function processInbox(
     inboxId: string,
     barId: string,
+    inboxName: string,
     bookmarkSystemPrompt: string,
     aiProvider: ReturnType<typeof createAIProvider>,
   ): Promise<void> {
@@ -77,6 +83,7 @@ export function useBookmarkProcess() {
     if (bookmarks.length === 0) return
 
     for (let i = 0; i < bookmarks.length; i++) {
+      if (stopRequested) break
       const bm = bookmarks[i]
       if (!bm.url) continue
 
@@ -93,6 +100,8 @@ export function useBookmarkProcess() {
         metaWarning = '页面获取失败，已用书签标题兜底'
       }
 
+      console.log('[bookmark] 页面信息', { url: bm.url, ...meta })
+
       try {
         currentItem.value = { ...currentItem.value, phase: 'AI 整理中…' }
         const { folderPath, title, summary, tags } = await processBookmark(
@@ -101,6 +110,7 @@ export function useBookmarkProcess() {
           bm.url,
           bm.title ?? '',
           barId,
+          inboxName,
           bookmarkSystemPrompt,
           aiProvider,
         )
@@ -141,6 +151,7 @@ export function useBookmarkProcess() {
   async function start(): Promise<void> {
     if (state.value === 'processing') return
 
+    stopRequested = false
     state.value = 'processing'
     log.value = []
     progress.value = { done: 0, total: 0 }
@@ -165,7 +176,7 @@ export function useBookmarkProcess() {
 
       const inbox = await findOrCreateInbox(settings.bookmarkInboxFolder, bar.id)
       const aiProvider = createAIProvider(settings.aiConfig)
-      await processInbox(inbox.id, inbox.parentId ?? bar.id, settings.bookmarkSystemPrompt, aiProvider)
+      await processInbox(inbox.id, inbox.parentId ?? bar.id, settings.bookmarkInboxFolder, settings.bookmarkSystemPrompt, aiProvider)
 
       state.value = 'done'
       currentItem.value = null
@@ -186,6 +197,7 @@ export function useBookmarkProcess() {
   async function startAll(): Promise<void> {
     if (state.value === 'processing') return
 
+    stopRequested = false
     state.value = 'processing'
     log.value = []
     progress.value = { done: 0, total: 0 }
@@ -225,7 +237,7 @@ export function useBookmarkProcess() {
       }
 
       const aiProvider = createAIProvider(settings.aiConfig)
-      await processInbox(inbox.id, inbox.parentId ?? bar.id, settings.bookmarkSystemPrompt, aiProvider)
+      await processInbox(inbox.id, inbox.parentId ?? bar.id, settings.bookmarkInboxFolder, settings.bookmarkSystemPrompt, aiProvider)
 
       state.value = 'done'
       currentItem.value = null
@@ -244,5 +256,5 @@ export function useBookmarkProcess() {
     }
   }
 
-  return { state, log, progress, currentItem, moveProgress, isMoving, start, startAll }
+  return { state, log, progress, currentItem, moveProgress, isMoving, start, startAll, stop }
 }

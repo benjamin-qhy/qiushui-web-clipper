@@ -99,8 +99,15 @@ function openSettings() {
         <span v-else>▶ 整理「待整理」文件夹</span>
       </button>
       <button
+        v-if="processor.state.value === 'processing'"
+        class="btn-process btn-stop"
+        @click="processor.stop()"
+      >
+        ■ 停止整理
+      </button>
+      <button
+        v-else
         class="btn-process btn-reprocess"
-        :disabled="processor.state.value === 'processing'"
         @click="processor.startAll()"
       >
         <span v-if="processor.isMoving.value">
@@ -250,6 +257,12 @@ function openSettings() {
   border: 1px solid var(--color-border);
 }
 .btn-reprocess:hover:not(:disabled) { background: var(--color-border-light); opacity: 1; }
+.btn-stop {
+  background: var(--color-surface);
+  color: #c62828;
+  border: 1px solid #c62828;
+}
+.btn-stop:hover { background: #fff5f5; opacity: 1; }
 .btn-export {
   background: var(--color-surface);
   color: var(--color-accent);

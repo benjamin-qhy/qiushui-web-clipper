@@ -10,14 +10,16 @@ export function buildFolderPaths(
   nodes: BookmarkNode[],
   descriptions: Record<string, string> = {},
   prefix = '',
+  excludeTitle = '',
 ): string[] {
   const paths: string[] = []
   for (const node of nodes) {
     if (node.url) continue
+    if (!prefix && excludeTitle && node.title === excludeTitle) continue
     const basePath = prefix ? `${prefix}/${node.title}` : node.title
     const desc = descriptions[node.id]
     paths.push(desc ? `${basePath} — ${desc}` : basePath)
-    if (node.children?.length) paths.push(...buildFolderPaths(node.children, descriptions, basePath))
+    if (node.children?.length) paths.push(...buildFolderPaths(node.children, descriptions, basePath, excludeTitle))
   }
   return paths
 }
@@ -98,17 +100,30 @@ export async function processBookmark(
   url: string,
   originalTitle: string,
   inboxParentId: string,
+  inboxName: string,
   userSystemPrompt: string,
   aiProvider: AIProvider,
 ): Promise<{ folderPath: string; title: string; summary: string; tags: string[] }> {
   const tree = await browser.bookmarks.getTree()
   const rootChildren = tree[0]?.children ?? []
   const descriptions = await getFolderDescriptions()
-  const folderPaths = buildFolderPaths(rootChildren, descriptions)
+  const folderPaths = buildFolderPaths(rootChildren, descriptions, '', inboxName)
   const pathMap = buildFolderPathMap(rootChildren)
 
   const { system, user } = buildProcessPrompt(meta, url, folderPaths, userSystemPrompt)
+  console.log(
+    '\n' + '='.repeat(60) + '\n' +
+    '【系统提示词】\n' + system + '\n' +
+    '-'.repeat(60) + '\n' +
+    '【用户提示词】\n' + user + '\n' +
+    '='.repeat(60)
+  )
   const raw = await aiProvider.complete(user, system)
+  console.log(
+    '\n' + '-'.repeat(60) + '\n' +
+    '【模型返回】\n' + raw + '\n' +
+    '-'.repeat(60)
+  )
   const result = parseProcessResult(raw, originalTitle)
 
   const resolvedPath = pathMap.has(result.folder) ? result.folder : '其他'

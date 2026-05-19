@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { tabsCreate, tabsGet, tabsRemove, addListener, removeListener, executeScript } = vi.hoisted(() => ({
+const { tabsCreate, tabsGet, tabsRemove, tabsSendMessage, addListener, removeListener, executeScript } = vi.hoisted(() => ({
   tabsCreate: vi.fn(),
   tabsGet: vi.fn(),
   tabsRemove: vi.fn(),
+  tabsSendMessage: vi.fn(),
   addListener: vi.fn(),
   removeListener: vi.fn(),
   executeScript: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock('wxt/browser', () => ({
       create: tabsCreate,
       get: tabsGet,
       remove: tabsRemove,
+      sendMessage: tabsSendMessage,
       onUpdated: {
         addListener,
         removeListener,
@@ -26,13 +28,20 @@ vi.mock('wxt/browser', () => ({
   },
 }))
 
-import { buildMetaFromDom, fetchPageMeta } from '../../src/bookmark/meta'
+import { fetchPageMeta } from '../../src/bookmark/meta'
 
 beforeEach(() => {
   tabsCreate.mockResolvedValue({ id: 123 })
   tabsGet.mockResolvedValue({ status: 'complete' })
   tabsRemove.mockResolvedValue(undefined)
-  executeScript.mockResolvedValue([{ result: { title: 'Loaded', keywords: '', description: '' } }])
+  tabsSendMessage.mockResolvedValue({
+    ok: true,
+    data: {
+      title: 'Loaded',
+      description: '页面描述',
+      blocks: [],
+    },
+  })
 })
 
 afterEach(() => {
@@ -40,29 +49,53 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe('buildMetaFromDom', () => {
-  it('returns title, keywords, description', () => {
-    const result = buildMetaFromDom('React 文档', 'react,hooks', '一个 JS 框架')
-    expect(result).toEqual({
-      title: 'React 文档',
-      keywords: 'react,hooks',
-      description: '一个 JS 框架',
-    })
-  })
-
-  it('allows empty strings for missing meta', () => {
-    const result = buildMetaFromDom('标题', '', '')
-    expect(result.keywords).toBe('')
-    expect(result.description).toBe('')
-  })
-})
-
 describe('fetchPageMeta', () => {
-  it('waits 30 seconds by default for a hidden tab to complete', async () => {
-    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+  it('returns title and description from content script response', async () => {
+    const meta = await fetchPageMeta('https://example.com')
+    expect(meta.title).toBe('Loaded')
+    expect(meta.description).toBe('页面描述')
+  })
 
+  it('falls back to first 500 chars of markdown when no description', async () => {
+    tabsSendMessage.mockResolvedValue({
+      ok: true,
+      data: {
+        title: 'No Desc',
+        blocks: [],
+        markdown: 'A'.repeat(600),
+      },
+    })
+    const meta = await fetchPageMeta('https://example.com')
+    expect(meta.description).toBe('A'.repeat(500))
+  })
+
+  it('falls back to first 500 chars of blocks text when no description and no markdown', async () => {
+    tabsSendMessage.mockResolvedValue({
+      ok: true,
+      data: {
+        title: 'Blocks',
+        blocks: [
+          { type: 'text', spans: [{ text: 'Hello ' }] },
+          { type: 'text', spans: [{ text: 'World' }] },
+        ],
+      },
+    })
+    const meta = await fetchPageMeta('https://example.com')
+    expect(meta.description).toContain('Hello')
+    expect(meta.description).toContain('World')
+  })
+
+  it('falls back to executeScript when sendMessage fails', async () => {
+    tabsSendMessage.mockRejectedValue(new Error('no content script'))
+    executeScript.mockResolvedValue([{ result: { title: 'Fallback', keywords: '', description: 'fb desc' } }])
+    const meta = await fetchPageMeta('https://example.com')
+    expect(meta.title).toBe('Fallback')
+    expect(meta.description).toBe('fb desc')
+  })
+
+  it('sets timeout to 30 seconds by default', async () => {
+    const spy = vi.spyOn(globalThis, 'setTimeout')
     await fetchPageMeta('https://example.com')
-
-    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 30000)
+    expect(spy).toHaveBeenCalledWith(expect.any(Function), 30000)
   })
 })

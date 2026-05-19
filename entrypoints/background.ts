@@ -55,7 +55,7 @@ async function triggerProcessing(): Promise<void> {
         let meta = await fetchPageMeta(bm.url).catch(() => ({ title: bm.title ?? '', keywords: '', description: '' }))
         if (!meta.title) meta = { title: bm.title ?? '', keywords: '', description: '' }
 
-        await processBookmark(bm.id, meta, bm.url, bm.title ?? '', parentId, settings.bookmarkSystemPrompt, aiProvider)
+        await processBookmark(bm.id, meta, bm.url, bm.title ?? '', parentId, settings.bookmarkInboxFolder, settings.bookmarkSystemPrompt, aiProvider)
         processingStatus.processed++
       } catch {
         // Skip failed bookmark and continue with the rest
