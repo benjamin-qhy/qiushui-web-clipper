@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useBookmarkTree } from '../../src/composables/useBookmarkTree'
 
-const { bookmarksCreate, bookmarksGetChildren, bookmarksGetTree, recordsGetAll } = vi.hoisted(() => ({
+const { bookmarksCreate, bookmarksGetChildren, bookmarksGetSubTree, bookmarksGetTree, recordsGetAll } = vi.hoisted(() => ({
   bookmarksCreate: vi.fn(),
   bookmarksGetChildren: vi.fn(),
+  bookmarksGetSubTree: vi.fn(),
   bookmarksGetTree: vi.fn(),
   recordsGetAll: vi.fn(),
 }))
@@ -13,6 +14,7 @@ vi.mock('wxt/browser', () => ({
     bookmarks: {
       create: bookmarksCreate,
       getChildren: bookmarksGetChildren,
+      getSubTree: bookmarksGetSubTree,
       getTree: bookmarksGetTree,
     },
   },
@@ -25,11 +27,44 @@ vi.mock('../../src/storage/bookmarks', () => ({
 beforeEach(() => {
   bookmarksCreate.mockReset()
   bookmarksGetChildren.mockReset()
+  bookmarksGetSubTree.mockReset()
   bookmarksGetTree.mockReset()
   recordsGetAll.mockReset()
 
   bookmarksGetTree.mockResolvedValue([{ id: '0', title: '', children: [] }])
   recordsGetAll.mockResolvedValue([])
+})
+
+describe('useBookmarkTree.selectFolder', () => {
+  it('selects bookmarks from the full folder subtree', async () => {
+    bookmarksGetSubTree.mockResolvedValue([
+      {
+        id: '1',
+        title: '书签栏',
+        children: [
+          { id: '2', parentId: '1', title: 'Root bookmark', url: 'https://root.example' },
+          {
+            id: '3',
+            parentId: '1',
+            title: '工具',
+            children: [
+              { id: '4', parentId: '3', title: 'Nested bookmark', url: 'https://nested.example' },
+            ],
+          },
+        ],
+      },
+    ])
+
+    const tree = useBookmarkTree()
+    await tree.selectFolder('1')
+
+    expect(tree.selectedBookmarks.value.map(b => b.id)).toEqual(['2', '4'])
+    expect(tree.selectedFolderStats.value).toEqual({
+      directBookmarkCount: 1,
+      recursiveBookmarkCount: 2,
+      childFolderCount: 1,
+    })
+  })
 })
 
 describe('useBookmarkTree.createFolder', () => {

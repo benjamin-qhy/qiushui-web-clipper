@@ -16,10 +16,21 @@ export interface FolderNode {
   expanded: boolean
 }
 
+export interface SelectedFolderStats {
+  directBookmarkCount: number
+  recursiveBookmarkCount: number
+  childFolderCount: number
+}
+
 export function useBookmarkTree() {
   const folderTree = ref<FolderNode[]>([])
   const selectedFolderId = ref<string | null>(null)
   const selectedBookmarks = ref<BookmarkNode[]>([])
+  const selectedFolderStats = ref<SelectedFolderStats>({
+    directBookmarkCount: 0,
+    recursiveBookmarkCount: 0,
+    childFolderCount: 0,
+  })
   const processedIds = ref<Set<string>>(new Set())
   const recordsMap = ref<Map<string, BookmarkRecord>>(new Map())
   const dragOverFolderId = ref<string | null>(null)
@@ -57,8 +68,24 @@ export function useBookmarkTree() {
 
   async function selectFolder(folderId: string) {
     selectedFolderId.value = folderId
-    const children = await browser.bookmarks.getChildren(folderId)
-    selectedBookmarks.value = children.filter(n => !!n.url)
+    const subtree = await browser.bookmarks.getSubTree(folderId)
+    const rootChildren = subtree[0]?.children ?? []
+    const bookmarks: BookmarkNode[] = []
+
+    function collectBookmarks(nodes: BookmarkNode[]) {
+      for (const node of nodes) {
+        if (node.url) bookmarks.push(node)
+        if (node.children) collectBookmarks(node.children)
+      }
+    }
+
+    collectBookmarks(rootChildren)
+    selectedBookmarks.value = bookmarks
+    selectedFolderStats.value = {
+      directBookmarkCount: rootChildren.filter(node => !!node.url).length,
+      recursiveBookmarkCount: bookmarks.length,
+      childFolderCount: rootChildren.filter(node => !node.url).length,
+    }
   }
 
   async function toggleExpand(folderId: string) {
@@ -130,6 +157,11 @@ export function useBookmarkTree() {
     if (selectedFolderId.value === folderId) {
       selectedFolderId.value = null
       selectedBookmarks.value = []
+      selectedFolderStats.value = {
+        directBookmarkCount: 0,
+        recursiveBookmarkCount: 0,
+        childFolderCount: 0,
+      }
     }
   }
 
@@ -156,6 +188,7 @@ export function useBookmarkTree() {
     folderTree,
     selectedFolderId,
     selectedBookmarks,
+    selectedFolderStats,
     processedIds,
     recordsMap,
     dragOverFolderId,

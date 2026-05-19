@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { BookmarkNode } from '../../../src/composables/useBookmarkTree'
+import type { BookmarkNode, SelectedFolderStats } from '../../../src/composables/useBookmarkTree'
 import type { BookmarkRecord } from '../../../src/storage/bookmarks'
 
 const props = defineProps<{
@@ -7,6 +7,7 @@ const props = defineProps<{
   processedIds: Set<string>
   records?: Map<string, BookmarkRecord>
   folderTitle: string
+  folderStats: SelectedFolderStats
 }>()
 
 const emit = defineEmits<{
@@ -38,7 +39,12 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   <div class="list-panel">
     <div class="list-header">
       <h2 class="folder-title">{{ folderTitle || '请选择文件夹' }}</h2>
-      <span class="count" v-if="bookmarks.length > 0">{{ bookmarks.length }} 条</span>
+      <span class="count" v-if="bookmarks.length > 0">
+        {{ bookmarks.length }} 条
+        <template v-if="folderStats.childFolderCount > 0">
+          （含子文件夹，直接 {{ folderStats.directBookmarkCount }} 条）
+        </template>
+      </span>
     </div>
 
     <div v-if="!folderTitle" class="empty-hint">← 点击左侧文件夹查看书签</div>
