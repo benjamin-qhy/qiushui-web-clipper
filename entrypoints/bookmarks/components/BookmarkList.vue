@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { BookmarkNode } from '../../../src/composables/useBookmarkTree'
+import type { BookmarkRecord } from '../../../src/storage/bookmarks'
 
 const props = defineProps<{
   bookmarks: BookmarkNode[]
   processedIds: Set<string>
+  records?: Map<string, BookmarkRecord>
   folderTitle: string
 }>()
 
@@ -61,6 +63,15 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
         <div class="bm-content" @click="bm.url && emit('openBookmark', bm.url)">
           <span class="bm-title">{{ bm.title || bm.url }}</span>
           <span class="bm-url">{{ bm.url }}</span>
+          <span v-if="props.records?.get(bm.id)?.category" class="bm-category">
+            {{ props.records?.get(bm.id)?.category }}
+          </span>
+          <span v-if="props.records?.get(bm.id)?.summary" class="bm-summary">
+            {{ props.records?.get(bm.id)?.summary }}
+          </span>
+          <span v-if="props.records?.get(bm.id)?.tags?.length" class="bm-tags">
+            <span v-for="tag in props.records?.get(bm.id)?.tags" :key="tag" class="bm-tag">{{ tag }}</span>
+          </span>
         </div>
         <span v-if="processedIds.has(bm.id)" class="badge-processed">已整理</span>
         <button class="delete-btn" title="删除" @click.stop="emit('deleteBookmark', bm.id)">✕</button>
@@ -136,6 +147,37 @@ function onDragStart(e: DragEvent, bookmarkId: string) {
   margin-top: 1px;
 }
 .bm-content:hover .bm-title { color: var(--color-accent); }
+.bm-category {
+  display: block;
+  font-size: 12px;
+  color: var(--color-accent);
+  margin-top: 2px;
+  font-weight: 500;
+}
+.bm-summary {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.bm-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.bm-tag {
+  font-size: 11px;
+  padding: 1px 5px;
+  background: var(--color-border-light);
+  color: var(--color-text-secondary);
+  border-radius: 2px;
+}
 .badge-processed {
   flex-shrink: 0;
   font-size: 14px;

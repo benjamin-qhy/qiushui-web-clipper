@@ -65,6 +65,7 @@ function setError(e: unknown) {
       <BookmarkList
         :bookmarks="tree.selectedBookmarks.value"
         :processed-ids="tree.processedIds.value"
+        :records="tree.recordsMap.value"
         :folder-title="selectedFolderTitle"
         @delete-bookmark="(id) => tree.deleteBookmark(id).catch(setError)"
         @open-bookmark="handleOpenBookmark"
