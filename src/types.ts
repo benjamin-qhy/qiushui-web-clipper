@@ -46,6 +46,7 @@ export interface DocMeta {
   published?: string      // ISO 日期字符串，如 "2026-04-01"
   created: string         // ISO 日期字符串，保存时自动填入
   description?: string    // AI速览文本（如有）
+  tags?: string[]
 }
 
 export interface DocContent extends DocMeta {

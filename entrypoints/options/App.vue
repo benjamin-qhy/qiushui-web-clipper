@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { browser } from 'wxt/browser'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useSettings } from '../../src/composables/useSettings'
 import { useVaultStore } from '../../src/composables/useVaultStore'
@@ -24,7 +25,7 @@ const ossRegions = [
   { value: 'oss-cn-hongkong', label: '中国香港' },
 ]
 
-const version = '2.0.0'
+const version = browser.runtime.getManifest().version
 const mainEl = ref<HTMLElement | null>(null)
 const activeSection = ref('vault')
 const sectionIds = ['vault', 'images', 'org']

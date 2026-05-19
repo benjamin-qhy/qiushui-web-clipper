@@ -23,8 +23,12 @@ export function buildFrontmatter(meta: DocMeta): string {
   } else {
     lines.push('description:')
   }
-  lines.push('tags:')
-  lines.push('  - "clippings"')
+  if (meta.tags && meta.tags.length > 0) {
+    lines.push('tags:')
+    for (const tag of meta.tags) lines.push(`  - "${tag}"`)
+  } else {
+    lines.push('tags:')
+  }
   lines.push('---')
   lines.push('')
   return lines.join('\n')

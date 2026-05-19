@@ -10,6 +10,7 @@ import BookmarkList from './components/BookmarkList.vue'
 import AISidebar from './components/AISidebar.vue'
 import type { FolderNode } from '../../src/composables/useBookmarkTree'
 
+const version = browser.runtime.getManifest().version
 const tree = useBookmarkTree()
 const bookmarkSearch = useBookmarkSearch()
 const aiAvailable = ref(false)
@@ -84,6 +85,7 @@ function handleClearSearch() {
     <div class="pane-left">
       <div class="pane-header">
         <div class="pane-title">书签</div>
+        <span class="pane-version">v{{ version }}</span>
       </div>
       <div class="pane-body">
         <FolderTree
@@ -164,6 +166,13 @@ body { margin: 0; font-family: var(--font-ui); background: var(--color-base); }
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.pane-version {
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 .pane-brand {
   font-size: 14px;

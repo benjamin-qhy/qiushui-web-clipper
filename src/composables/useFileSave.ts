@@ -30,12 +30,13 @@ export function useFileSave() {
       const effectiveSubDir = overrideDirHandle ? '' : settings.subDir
       let body: string
 
+      const storageHandle = overrideDirHandle ?? vaultHandle
       if (doc.markdown !== undefined) {
         const uploader = createUploader(settings)
         const notename = sanitizeFilename(doc.title)
         body = await downloadAndReplaceMarkdownImages(
           doc.markdown,
-          vaultHandle,
+          storageHandle,
           effectiveSubDir,
           notename,
           uploader,
@@ -52,7 +53,7 @@ export function useFileSave() {
             ? await downloadAndReplaceImages(
                 doc.blocks,
                 tab.id,
-                vaultHandle,
+                storageHandle,
                 effectiveSubDir,
                 notename,
                 uploader,

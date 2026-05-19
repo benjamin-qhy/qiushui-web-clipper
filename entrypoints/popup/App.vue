@@ -6,6 +6,7 @@ import { useDocContent } from '../../src/composables/useDocContent'
 import { useFileSave } from '../../src/composables/useFileSave'
 import { getSettings, saveSettings } from '../../src/storage/settings'
 
+const version = browser.runtime.getManifest().version
 const vault = useVaultStore()
 const docContent = useDocContent()
 const fileSave = useFileSave()
@@ -24,7 +25,7 @@ const editableAuthor = ref('')
 const editablePublished = ref('')
 const editableCreated = ref('')
 const editableDescription = ref('')
-const editableTags = ref('clippings')
+const editableTags = ref('')
 
 onMounted(async () => {
   await vault.init()
@@ -74,6 +75,10 @@ const previewText = computed(() => {
 })
 
 function mergedDoc() {
+  const tags = editableTags.value
+    .split(',')
+    .map(t => t.trim())
+    .filter(Boolean)
   return {
     ...doc.value!,
     title: editableTitle.value || doc.value!.title,
@@ -82,6 +87,7 @@ function mergedDoc() {
     published: editablePublished.value || undefined,
     created: editableCreated.value,
     description: editableDescription.value || undefined,
+    tags: tags.length > 0 ? tags : undefined,
   }
 }
 
@@ -102,15 +108,7 @@ async function handleSaveAs() {
   if (!vault.handle.value || !doc.value) return
   saveAsError.value = null
   try {
-    const selected = await window.showDirectoryPicker({
-      mode: 'readwrite',
-      startIn: vault.handle.value,
-    })
-    const relativeParts = await vault.handle.value.resolve(selected)
-    if (relativeParts === null) {
-      saveAsError.value = '请选择当前笔记库路径内的目录'
-      return
-    }
+    const selected = await window.showDirectoryPicker({ mode: 'readwrite' })
     await fileSave.save(vault.handle.value, mergedDoc(), selected)
     showDropdown.value = false
   } catch (e) {
@@ -152,6 +150,7 @@ async function handleSubDirBlur() {
       <!-- 标题 + 设置入口 -->
       <div class="title-row">
         <span class="header-brand">{{ sourceLabel }}</span>
+        <span class="header-version">v{{ version }}</span>
         <button class="btn-settings" @click="openSettings">设置</button>
         <button class="btn-bookmarks" @click="openBookmarks">标签管理</button>
       </div>
@@ -289,6 +288,12 @@ async function handleSubDirBlur() {
   text-transform: uppercase;
   color: var(--color-text);
   flex: 1;
+}
+.header-version {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
 .btn-settings {
   font-size: 14px;
