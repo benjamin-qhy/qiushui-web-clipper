@@ -160,7 +160,7 @@ function openSettings() {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 20px;
   color: var(--color-text-muted);
   padding: 0 3px;
   line-height: 1;
@@ -191,14 +191,21 @@ function openSettings() {
 .btn-process:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Current item */
+@keyframes pulse-border {
+  0%, 100% { border-left-color: transparent; }
+  50% { border-left-color: var(--color-accent); }
+}
+
 .current-item {
   padding: 8px 16px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border-light);
+  border-left: 3px solid transparent;
   display: flex;
   flex-direction: column;
   gap: 2px;
   flex-shrink: 0;
+  animation: pulse-border 1.4s ease-in-out infinite;
 }
 .current-index {
   font-size: 14px;
