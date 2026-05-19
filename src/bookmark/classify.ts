@@ -5,13 +5,18 @@ import type { PageMeta } from './meta'
 
 type BookmarkNode = Browser.bookmarks.BookmarkTreeNode
 
-export function buildFolderPaths(nodes: BookmarkNode[], prefix = ''): string[] {
+export function buildFolderPaths(
+  nodes: BookmarkNode[],
+  descriptions: Record<string, string> = {},
+  prefix = '',
+): string[] {
   const paths: string[] = []
   for (const node of nodes) {
     if (node.url) continue
-    const path = prefix ? `${prefix}/${node.title}` : node.title
-    paths.push(path)
-    if (node.children?.length) paths.push(...buildFolderPaths(node.children, path))
+    const basePath = prefix ? `${prefix}/${node.title}` : node.title
+    const desc = descriptions[node.id]
+    paths.push(desc ? `${basePath} — ${desc}` : basePath)
+    if (node.children?.length) paths.push(...buildFolderPaths(node.children, descriptions, basePath))
   }
   return paths
 }

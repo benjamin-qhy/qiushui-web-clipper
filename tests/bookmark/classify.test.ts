@@ -39,6 +39,30 @@ describe('buildFolderPaths', () => {
   })
 })
 
+describe('buildFolderPaths with descriptions', () => {
+  it('appends description to path when provided', () => {
+    // node id '3' is '书签栏/工作/前端'
+    const paths = buildFolderPaths(tree, { '3': '前端框架和工具' })
+    expect(paths).toContain('书签栏/工作/前端 — 前端框架和工具')
+  })
+
+  it('does not append when description is empty string', () => {
+    const paths = buildFolderPaths(tree, { '3': '' })
+    expect(paths).toContain('书签栏/工作/前端')
+    expect(paths.some(p => p.includes(' — '))).toBe(false)
+  })
+
+  it('does not append when node id has no entry in descriptions', () => {
+    const paths = buildFolderPaths(tree, {})
+    expect(paths.some(p => p.includes(' — '))).toBe(false)
+  })
+
+  it('existing tests still pass without descriptions argument', () => {
+    const paths = buildFolderPaths(tree)
+    expect(paths).toContain('书签栏/工作/前端')
+  })
+})
+
 describe('buildFolderPathMap', () => {
   it('maps path to folder id', () => {
     const map = buildFolderPathMap(tree)
