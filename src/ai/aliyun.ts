@@ -4,7 +4,11 @@ import type { AIProvider } from './types'
 export class OpenAICompatibleProvider implements AIProvider {
   constructor(private config: AIConfig) {}
 
-  async complete(prompt: string): Promise<string> {
+  async complete(userPrompt: string, systemPrompt?: string): Promise<string> {
+    const messages: { role: string; content: string }[] = []
+    if (systemPrompt) messages.push({ role: 'system', content: systemPrompt })
+    messages.push({ role: 'user', content: userPrompt })
+
     const res = await fetch(this.chatCompletionsUrl(), {
       method: 'POST',
       headers: {
@@ -13,7 +17,7 @@ export class OpenAICompatibleProvider implements AIProvider {
       },
       body: JSON.stringify({
         model: this.config.model,
-        messages: [{ role: 'user', content: prompt }],
+        messages,
         response_format: { type: 'json_object' },
       }),
     })

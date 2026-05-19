@@ -1,5 +1,10 @@
 import type { AIProvider } from '../ai/types'
-import type { AIResult } from '../ai/types'
+
+interface AIResult {
+  summary: string
+  tags: string[]
+  category: string
+}
 
 export function buildPrompt(title: string, url: string, pageText: string): string {
   const content = pageText.slice(0, 2000)
